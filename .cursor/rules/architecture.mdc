@@ -1,0 +1,214 @@
+# High Level Architectural Philosophy
+
+## Core Principle: Build by Domain, Integrate Through Clear Boundaries
+
+Every project follows a **domain-driven modular architecture** that enables parallel development via git flow. Each domain owns its complete business logic and can be built independently by a team or individual, ensuring clear ownership and faster delivery.
+
+## Architecture Structure
+
+1. **Core Layer** (`/core`)
+
+   - Shared utilities, configs, base components, db primitives, and common types
+   - Stable during feature sprints - only bug fixes or security patches
+   - All domains can depend on this layer
+
+2. **Domain Modules** (`/domains`)
+
+   - Each domain is self-contained with ALL its business logic
+   - Domains expose functionality ONLY through their interface (`index.ts` or `__init__.py`)
+   - Domains can depend on core, cross-cutting services, and other domain APIs
+   - **NO circular dependencies between domains** - if you hit this, refactor shared logic to core or services
+   - Inter-domain communication sparingly through public APIs.
+
+3. **Cross-Cutting Services** (`/services`)
+   - Notifications, logging, analytics, caching, etc.
+   - Used by multiple domains but owned by a single individual or platform team
+   - Expose simple, focused APIs
+
+## Key Rules
+
+- **One Team (or individual), One Domain**: Each domain module has a single owning team
+- **Interface-Only Access**: Only import from `domains/X/index` or `domains/X/__init__`, never from internals
+- **No Mid-Flight Refactoring**: If you spot reusable patterns while building, add a TODO but don't refactor until the feature is complete
+- **Git Flow Ready**: Each domain change = one branch = one merge request
+- **Use External Libraries**: Always prefer external solutions over custom implementations 
+- **Export Minimally**: Only export what external consumers actually need
+- **Duplicate First, Abstract Later**: If two domains need the same logic, copy it once then extract to core/services after both ship
+
+## Structure
+
+```
+project/
+├── core/                     # Core foundational layer
+│   ├── understandMe.md      # How core layer works
+│   ├── utils/
+│   ├── config/
+│   ├── db/
+│   └── shared-components/
+├── services/                 # Cross-cutting concerns
+│   ├── auth/                # Authentication & authorization
+│   ├── notifications/       # Email, push, SMS
+│   ├── analytics/           # Tracking, metrics
+│   ├── logging/             # Structured logging
+│   └── cache/               # Redis, memory cache
+├── api/                      # For API projects only
+├── domains/
+│   ├── user-management/      # Complete user domain
+│   │   ├── understandMe.md  # What this domain does & how
+│   │   ├── index.ts         # ONLY entry point
+│   │   ├── common/          # Shared within this domain only
+│   │   │   └── validation-rules.ts
+│   │   ├── profiles/        # User profile management
+│   │   │   ├── profile-service.ts
+│   │   │   └── profile-utils.ts
+│   │   └── preferences/     # User settings & preferences
+│   │       └── user-settings.ts
+│   ├── content/             # Complete content domain
+│   │   ├── understandMe.md
+│   │   ├── index.ts
+│   │   ├── common/          # Shared within this domain only
+│   │   │   ├── content-types.ts
+│   │   │   └── sanitizers.ts
+│   │   ├── posts/           # Blog posts, articles
+│   │   ├── comments/        # Comment system
+│   │   └── media/           # File uploads, images
+│   └── commerce/            # Complete commerce domain
+│       ├── understandMe.md
+│       ├── index.ts
+│       ├── common/          # Shared within this domain only
+│       │   ├── pricing-utils.ts
+│       │   └── currency-formatters.ts
+│       ├── products/        # Product catalog
+│       ├── orders/          # Order processing
+│       └── payments/        # Payment handling
+```
+
+**For Web APIs** (FastAPI/Express): Add a separate `/api` module with a `routers/` subdirectory. Each domain gets its own router file that exposes domain functionality through HTTP endpoints. The API layer depends on domains, never the reverse.
+
+```
+api/
+├── routers/
+│   ├── user-management.ts    # Routes for user domain
+│   ├── content.ts           # Routes for content domain  
+│   ├── commerce.ts          # Routes for commerce domain
+│   └── auth.ts              # Routes for auth service
+├── middleware/              # Shared API middleware
+└── main.ts                  # App setup and router registration
+```
+
+**Remember**: Domains should be able to be developed in complete isolation once the foundation is set. If you must modify another domain's code, the architecture has failed.
+
+## Domain Organization
+
+- **Start simple** - organize by business capability, not by technical layers
+- **Main business concepts get directories** when substantial (100+ lines)
+- **Shared domain code goes in `/common`** - used throughout that domain only
+- **Use external libraries** over custom solutions
+- **Export minimally** - only what external consumers need
+
+## Inter-Domain Communication
+
+- **Direct APIs**: Import from other domains' public interfaces (`domains/X/index`)
+- **Events**: Publish domain events for complex workflows or notifications
+- **Services**: Use shared services for cross-cutting concerns
+- **No Circular Dependencies**: If Domain A needs Domain B and B needs A, extract shared logic to core or services
+- **Interface Contracts**: Well-defined APIs between domains
+
+## Domain Documentation with understandMe.md
+
+**EVERY domain and the core layer MUST have an `understandMe.md` file**. These are your quick reference guides:
+
+**When to use understandMe.md:**
+
+- Read it FIRST when starting work on any domain/core layer
+- Update it AFTER completing significant changes
+- Keep it open while working on complex domains
+
+**What goes in understandMe.md (keep it under 50 lines):**
+
+```markdown
+# [Domain Name] - Quick Reference
+
+## Purpose (1-2 lines)
+
+What business problems this domain solves and why it exists.
+
+## Key Capabilities
+
+- `createProfile()` - User profile management
+- `updatePreferences()` - User settings and preferences
+- `getUserData()` - Profile data retrieval
+
+## Internal Structure
+
+- `profiles/` - User profile CRUD and validation
+- `preferences/` - User settings and preferences
+- `common/` - Shared utilities within this domain
+
+## How It Works (5-10 lines max)
+
+1. User calls `createProfile()` from index
+2. Validates profile data via `profiles/validation.ts`
+3. Stores profile through `profiles/profile-service.ts`
+4. Publishes ProfileCreated event
+5. Returns `ProfileResult`
+
+## Events Published
+
+- `ProfileCreated` - When new user profile is created
+- `ProfileUpdated` - When profile changes occur
+
+## Events Consumed
+
+- `UserAuthenticated` - Updates last login timestamp
+
+## Key Decisions
+
+- Profile data separated from auth (handled by auth service)
+- [Any non-obvious architectural choices]
+```
+
+**Golden Rules for understandMe.md:**
+
+- **Be ruthless about brevity** - If it's over 50 lines, cut it down
+- **When editing, prefer removing over adding** - Clarity through simplicity
+- **No fluff** - Every line must provide immediate value
+- **Update sparingly** - Only when core behavior changes
+- **Think "cheat sheet"** not "documentation"
+
+## Testing Strategy
+
+Each domain owns its complete test suite in `/tests` mirroring the domain structure:
+
+```
+tests/
+├── core/                    # Core layer tests
+├── services/
+│   ├── auth/               # Auth service tests
+│   └── notifications/      # Notification service tests
+├── domains/
+│   ├── user-management/    # User domain tests
+│   ├── content/           # Content domain tests
+│   └── commerce/          # Commerce domain tests
+└── api/
+    └── routers/           # API integration tests
+```
+
+**Rules:**
+- **Domain isolation**: Each domain's tests run independently
+- **No cross-domain test dependencies**: Mock other domains' APIs
+- **Test what you own**: Only test your domain's public interface
+- **Integration tests in API layer**: Test domain interactions through HTTP
+
+## Architecture Checklist
+
+- Each domain has single owning team?
+- All imports go through domain index files or `__init__`?
+- No circular dependencies between domains?
+- Every domain has understandMe.md?
+- Can build domain without touching others?
+- Public API exports ONLY what consumers need?
+- Using external libraries over custom solutions?
+- Organization matches business capabilities, not technical layers?
+- Cross-cutting concerns properly isolated in services?
+- Tests mirror domain structure and run independently?

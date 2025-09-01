@@ -1,0 +1,220 @@
+"""Intelligent URL filtering module using AI for business intelligence scoring."""
+
+import logging
+from typing import List, Dict, Tuple
+from urllib.parse import urlparse
+
+# Import AI client for intelligent scoring
+from services.ai.client import ai_client
+
+# Configure logging
+logger = logging.getLogger(__name__)
+
+
+async def filter_valuable_urls(
+    urls: List[str], 
+    company_context: Dict[str, str],
+    max_urls: int = 7
+) -> List[Dict[str, str]]:
+    """
+    Main entry point for intelligent URL filtering.
+    
+    Uses AI to score URLs for business intelligence value, then ensures
+    category diversity in the final selection.
+    
+    Args:
+        urls: List of URLs to filter
+        company_context: Company context for AI scoring
+        max_urls: Maximum number of URLs to return (default: 7)
+        
+    Returns:
+        List of dictionaries with: url, score, reason, category
+        
+    Strategy:
+    1. AI-powered scoring for nuanced business intelligence assessment
+    2. Fallback to pattern-based scoring if AI fails
+    3. Category diversity algorithm to ensure balanced coverage
+    4. Always return max_urls even if some scoring fails
+    """
+    if not urls:
+        return []
+    
+    try:
+        # 1️⃣ AI-powered scoring ----
+        logger.info("Starting AI-powered URL scoring")
+        scored_urls = await ai_client.score_urls_for_business_intelligence(urls, str(company_context))
+        
+        # 2️⃣ Apply diversity algorithm ----
+        selected_urls = _ensure_diversity(scored_urls, max_urls)
+        
+        logger.info(f"AI scoring successful: {len(selected_urls)} URLs selected")
+        return selected_urls
+        
+    except Exception as e:
+        # 3️⃣ Fallback to pattern-based filtering ----
+        logger.warning(f"AI scoring failed, using fallback: {e}")
+        return _fallback_filter(urls, max_urls)
+
+
+def _ensure_diversity(
+    scored_urls: List[Dict], 
+    max_urls: int
+) -> List[Dict]:
+    """
+    Ensure category diversity in selected URLs.
+    
+    Strategy:
+    - Sort by score descending
+    - Track categories seen
+    - Max 2 URLs per category
+    - Fill remaining slots with highest scores
+    
+    Args:
+        scored_urls: List of scored URLs with category info
+        max_urls: Maximum URLs to return
+        
+    Returns:
+        Diverse selection of URLs maintaining quality
+    """
+    if not scored_urls:
+        return []
+    
+    # Sort by score (highest first)
+    scored_urls.sort(key=lambda x: x.get("score", 0), reverse=True)
+    
+    # Track categories and build diverse selection
+    selected_urls = []
+    category_counts = {}
+    
+    for url_data in scored_urls:
+        if len(selected_urls) >= max_urls:
+            break
+            
+        category = url_data.get("category", "other")
+        current_count = category_counts.get(category, 0)
+        
+        # Allow max 2 URLs per category for diversity
+        if current_count < 2:
+            selected_urls.append(url_data)
+            category_counts[category] = current_count + 1
+    
+    # If we haven't filled max_urls, add remaining high-scoring URLs
+    if len(selected_urls) < max_urls:
+        remaining_urls = [u for u in scored_urls if u not in selected_urls]
+        selected_urls.extend(remaining_urls[:max_urls - len(selected_urls)])
+    
+    logger.info(f"Diversity algorithm selected {len(selected_urls)} URLs across {len(category_counts)} categories")
+    return selected_urls
+
+
+def _fallback_filter(
+    urls: List[str], 
+    max_urls: int
+) -> List[Dict[str, str]]:
+    """
+    Basic pattern-based filtering if AI fails.
+    
+    Returns same structure as AI filter for consistency.
+    This ensures the system always works even without AI.
+    
+    Args:
+        urls: List of URLs to filter
+        max_urls: Maximum URLs to return
+        
+    Returns:
+        List of dictionaries with: url, score, reason, category
+    """
+    if not urls:
+        return []
+    
+    # Score URLs using pattern matching
+    scored_urls = []
+    for url in urls:
+        score, reason = _score_url_pattern_based(url)
+        scored_urls.append({
+            "url": url,
+            "score": score,
+            "reason": reason,
+            "category": _extract_category_from_reason(reason)
+        })
+    
+    # Sort by score and return top N
+    scored_urls.sort(key=lambda x: x["score"], reverse=True)
+    selected_urls = scored_urls[:max_urls]
+    
+    logger.info(f"Fallback filtering selected {len(selected_urls)} URLs")
+    return selected_urls
+
+
+def _score_url_pattern_based(url: str) -> Tuple[int, str]:
+    """
+    Pattern-based URL scoring for fallback scenarios.
+    
+    Args:
+        url: URL to score
+        
+    Returns:
+        Tuple of (score, reason)
+    """
+    url_lower = url.lower()
+    path = urlparse(url).path.lower()
+    
+    # High value patterns (score: 90-100)
+    if any(term in path for term in ['/about', '/company', '/mission']):
+        return 95, "Company overview and mission"
+    if any(term in path for term in ['/team', '/leadership', '/people']):
+        return 90, "Leadership and team information"
+    if any(term in path for term in ['/services', '/products', '/solutions']):
+        return 85, "Core offerings"
+    
+    # Medium value patterns (score: 60-80)
+    if '/blog' in path and any(term in path for term in ['culture', 'values', 'announcement']):
+        return 75, "Company culture insights"
+    if any(term in path for term in ['/customers', '/case-studies', '/testimonials']):
+        return 70, "Customer success stories"
+    if any(term in path for term in ['/investors', '/press', '/news']):
+        return 65, "Public announcements"
+    
+    # Low value patterns (score: 0-50)
+    if any(term in path for term in ['/privacy', '/terms', '/legal', '/cookie']):
+        return 10, "Legal/compliance pages"
+    if any(term in path for term in ['/login', '/signup', '/contact']):
+        return 20, "Utility pages"
+    
+    # Default medium-low for unknown
+    return 40, "Potentially relevant content"
+
+
+def _extract_category_from_reason(reason: str) -> str:
+    """
+    Extract category from reason string for fallback filtering.
+    
+    Args:
+        reason: Reason string from pattern-based scoring
+        
+    Returns:
+        Category string
+    """
+    reason_lower = reason.lower()
+    
+    if any(term in reason_lower for term in ['mission', 'overview', 'leadership', 'team']):
+        return "leadership"
+    elif any(term in reason_lower for term in ['offerings', 'services', 'products']):
+        return "products"
+    elif any(term in reason_lower for term in ['culture', 'insights']):
+        return "culture"
+    elif any(term in reason_lower for term in ['customers', 'success', 'stories']):
+        return "customers"
+    elif any(term in reason_lower for term in ['investors', 'press', 'news']):
+        return "financials"
+    elif any(term in reason_lower for term in ['legal', 'compliance', 'utility']):
+        return "other"
+    else:
+        return "other"
+
+
+# TODO: Testing considerations
+# - Mock AI responses in tests
+# - Test diversity algorithm edge cases
+# - Test fallback behavior when AI fails
+# - Test category extraction logic 

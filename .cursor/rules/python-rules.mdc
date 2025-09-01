@@ -1,0 +1,361 @@
+---
+description: Python Rules for working with Python Codebases
+globs: "*.py"
+alwaysApply: false
+---
+
+# Python Coding Guidelines - Condensed
+
+**Core Principle:** Write Python code with absolute clarity as the top priority. Choose the most straightforward solution that any developer can understand at first glance.
+
+**Development Philosophy:**
+
+1. **Fewest lines, straightforward over clever** → Build only when needed
+2. **One responsibility per function/class/module** → Single clear purpose
+3. **Five-minute rule** → If you cannot explain it quickly, it is too complex
+4. **Write for humans first** → Clever code is bad code
+
+**Simple means:**
+
+- Understandable in under 30 seconds
+- Clear names: `calculate_monthly_payment()` not `calc()`
+- Max three nesting levels → Prefer early returns
+- Numbered comments for multi-step flows: `# 1️⃣ Validate → # 2️⃣ Process → # 3️⃣ Return`
+
+## Style Conventions
+
+**PEP8 with these specifics:**
+
+- Double quotes for strings
+- Trailing commas in multi-line structures
+- Type hints everywhere
+- **Pydantic v2 for all data validation** - Use BaseModel for structured data
+- **Favor functions over classes** - Classes only for singletons or true stateful objects
+
+```python
+def create_user_profile(
+    user_data: UserCreateRequest,
+    settings: Optional[UserSettings] = None,
+    notify_admin: bool = True,
+) -> UserProfile:
+    """Create user profile with validation and notifications."""
+    pass
+
+ALLOWED_EXTENSIONS = {".jpg", ".png", ".gif", ".pdf"}
+
+# ✅ Pydantic v2 for all data structures
+class UserSettings(BaseModel):
+    model_config = ConfigDict(frozen=True)
+    theme: str = Field(default="light", pattern="^(light|dark)$")
+    notifications_enabled: bool = True
+    max_file_size_mb: int = Field(default=10, ge=1, le=100)
+
+class UserCreateRequest(BaseModel):
+    """User creation request with validation."""
+    email: EmailStr
+    name: str = Field(min_length=2, max_length=100)
+    age: int = Field(ge=13, le=120)
+```
+
+## File Structure
+
+**1. Header (Required)**
+
+```python
+# ==============================================================================
+# user_service.py — User management and authentication
+# ==============================================================================
+# Purpose: Handle user CRUD operations and session management
+# Sections: Imports, Models, Functions, Public API
+# ==============================================================================
+```
+
+**2. Imports (Four groups)**
+
+```python
+# Standard Library --------------------------------------------------------------
+import os, sys
+from datetime import datetime
+from typing import Optional, List, Dict
+
+# Third Party -------------------------------------------------------------------
+import requests
+from pydantic import BaseModel, Field, ConfigDict
+from sqlalchemy import Column, String
+from sqlalchemy.orm import Session, sessionmaker, scoped_session
+
+# Core (App-wide) ---------------------------------------------------------------
+from app.database import get_connection
+from app.models import User, UserProfile
+from app.exceptions import ValidationError
+
+# Internal (Current Module) -----------------------------------------------------
+from ._helpers import validate_email
+from ._constants import MAX_RETRY_ATTEMPTS
+```
+
+**3. Public API**
+
+```python
+__all__ = ["create_user", "get_user", "validate_user_data", "UserNotFoundError"]
+```
+
+**4. Section Markers**
+
+```python
+# ==============================================================================
+# Models & Types | Helper Functions | Main Functions
+# ==============================================================================
+```
+
+## Error Handling - Fail Fast & Simple
+
+**Core Principles:**
+
+1. **Validate only uncertain inputs** - Guard against values that can realistically be None, empty, or malformed
+2. **Don't re-validate type-guaranteed values** - Trust your type hints and invariants
+3. **Catch only what you can handle** - Let other exceptions bubble up
+4. **Never swallow errors silently** - No empty except blocks
+5. **One try/except per function max** - If you need more, refactor
+6. **Log with context** - Include identifiers when logging, then handle or re-raise
+
+```python
+def process_payment(payment_data: PaymentRequest, user_id: str) -> PaymentResult:
+    """Process user payment - validate uncertain inputs only."""
+    # ✅ Validate uncertain inputs (external data)
+    if not payment_data.amount or payment_data.amount <= 0:
+        raise ValueError(f"Invalid payment amount: {payment_data.amount}")
+
+    if not user_id.strip():
+        raise ValueError("User ID cannot be empty")
+
+    # ✅ Business rule validation
+    if payment_data.amount > 10000:
+        raise ValueError(f"Payment amount exceeds limit: {payment_data.amount}")
+
+    # ✅ Single try/except - catch only what we can handle
+    try:
+        result = payment_gateway.charge(payment_data.amount, payment_data.method)
+        update_user_balance(user_id, -payment_data.amount)
+        return PaymentResult(success=True, transaction_id=result.id)
+    except PaymentGatewayError as e:
+        logger.error(f"Payment failed for user {user_id}: {e}")
+        raise  # Let caller handle
+
+def validate_user_registration(data: dict) -> UserCreateRequest:
+    """Validate user registration data - uncertain external input."""
+    # ✅ Use Pydantic for validation - will raise ValidationError if invalid
+    try:
+        return UserCreateRequest(**data)
+    except ValidationError as e:
+        logger.warning(f"Invalid registration data: {e}")
+        raise ValueError(f"Registration validation failed: {e}")
+
+# ❌ Bad - Silent failure
+def bad_process_data():
+    try:
+        process_payment()
+        send_email()
+        update_database()
+    except:
+        pass  # Silent failure
+
+# ❌ Bad - Over-validation of guaranteed values
+def bad_calculate_total(items: List[OrderItem]) -> float:
+    if not isinstance(items, list):  # Type hint guarantees this
+        raise TypeError("Items must be a list")
+    # items is guaranteed to be a List[OrderItem] by type hints
+```
+
+## Function-First Design
+
+**Favor functions over classes - use classes only for singletons or true stateful objects:**
+
+```python
+# ✅ Good - Function-based approach with dependency injection
+def create_user(user_data: UserCreateRequest, db_session: Session) -> User:
+    """Create new user account."""
+    # Validation handled by Pydantic
+    if user_exists(user_data.email, db_session):
+        raise UserAlreadyExistsError(f"User with email {user_data.email} already exists")
+
+    user = User(
+        email=user_data.email,
+        name=user_data.name,
+        created_at=datetime.now()
+    )
+
+    db_session.add(user)
+    db_session.commit()
+    return user
+
+def get_user(user_id: str, db_session: Session) -> Optional[User]:
+    """Retrieve user by ID."""
+    if not user_id.strip():
+        raise ValueError("User ID cannot be empty")
+
+    return db_session.query(User).filter_by(id=user_id).first()
+
+def update_user_settings(user_id: str, settings: UserSettings, db_session: Session) -> None:
+    """Update user settings."""
+    user = get_user(user_id, db_session)
+    if not user:
+        raise UserNotFoundError(f"User {user_id} not found")
+
+    user.settings = settings
+    db_session.commit()
+```
+
+## Function-First & Singletons
+
+**Prefer dependency injection over manual singletons for context-dependent resources:**
+
+```python
+# ✅ Good - Dependency injection for database connections
+def create_user(user_data: UserCreateRequest, db_session: Session) -> User:
+    """Create user with injected database session."""
+    if user_exists(user_data.email, db_session):
+        raise UserAlreadyExistsError(f"User with email {user_data.email} already exists")
+
+    user = User(email=user_data.email, name=user_data.name, created_at=datetime.now())
+    db_session.add(user)
+    db_session.commit()
+    return user
+
+# ✅ Good - Factory pattern (SQLAlchemy scoped_session)
+SessionLocal = scoped_session(sessionmaker(bind=engine))
+
+def get_db_session() -> Session:
+    return SessionLocal()
+
+# ✅ Acceptable - Singletons for stateless API clients
+class APIClient:
+    """Singleton for external API client."""
+    _instance: Optional['APIClient'] = None
+
+    def __new__(cls) -> 'APIClient':
+        if cls._instance is None:
+            cls._instance = super().__new__(cls)
+        return cls._instance
+
+# ❌ Avoid - Manual singletons for context-dependent resources
+class DatabaseConnection:  # Issues: thread-safety, testing, async
+    _instance = None
+
+# ❌ Avoid - Heavy classes with business logic
+class UserManager:  # Better as separate functions
+    def create_user(self, data): ...
+    def update_user(self, data): ...
+```
+
+## Resource Management
+
+```python
+@contextmanager
+def database_transaction() -> Generator[Connection, None, None]:
+    """Provide database connection with automatic transaction handling."""
+    conn = get_database_connection()
+    trans = conn.begin()
+    try:
+        yield conn
+        trans.commit()
+    except Exception:
+        trans.rollback()
+        raise
+    finally:
+        conn.close()
+
+# Usage with function-based approach and dependency injection
+def transfer_funds(transfer_request: TransferRequest) -> TransferResult:
+    """Transfer funds between users."""
+    # Validation handled by Pydantic
+    with database_transaction() as db_session:
+        sender = get_user_account(transfer_request.from_user_id, db_session)
+        receiver = get_user_account(transfer_request.to_user_id, db_session)
+
+        if sender.balance < transfer_request.amount:
+            raise InsufficientFundsError("Not enough balance")
+
+        sender.balance -= transfer_request.amount
+        receiver.balance += transfer_request.amount
+
+        db_session.commit()
+
+        return TransferResult(
+            success=True,
+            transaction_id=generate_transaction_id()
+        )
+```
+
+## Performance Patterns
+
+```python
+# List comprehensions
+active_users = [user for user in users if user.is_active]
+user_names = [user.name for user in users]
+
+# Generator expressions for large datasets
+user_emails = (user.email for user in users if user.verified)
+
+# Efficient error collection
+def validate_user_data(data: dict) -> UserCreateRequest:
+    """Validate user data with comprehensive error reporting."""
+    try:
+        return UserCreateRequest(**data)
+    except ValidationError as e:
+        # Pydantic provides detailed error context
+        logger.warning(f"User validation failed: {e}")
+        raise ValueError(f"Invalid user data: {e}")
+
+# Dataclasses for simple containers (prefer Pydantic when validation needed)
+@dataclass
+class UserSummary:
+    user_id: str
+    name: str
+    email: str
+    last_login: Optional[datetime] = None
+```
+
+## Async Patterns
+
+```python
+async def fetch_user_data(user_ids: List[str]) -> List[User]:
+    """Fetch multiple users concurrently."""
+    if not user_ids:
+        raise ValueError("User IDs list cannot be empty")
+
+    tasks = [fetch_single_user(user_id) for user_id in user_ids]
+    results = await asyncio.gather(*tasks, return_exceptions=True)
+
+    users = []
+    for result in results:
+        if isinstance(result, User):
+            users.append(result)
+        else:
+            logger.warning(f"Failed to fetch user: {result}")
+    return users
+
+async def process_user_stream(batch_size: int = 100) -> AsyncGenerator[ProcessedUser, None]:
+    """Process users from stream with backpressure handling."""
+    if batch_size <= 0:
+        raise ValueError("Batch size must be positive")
+
+    async for user_batch in get_user_stream(batch_size=batch_size):
+        for user in user_batch:
+            try:
+                processed = await process_user(user)
+                yield processed
+            except Exception as e:
+                logger.error(f"Failed to process user {user.id}: {e}")
+```
+
+---
+
+**Remember**:
+
+- **Function-first design** - Prefer dependency injection for context-dependent resources
+- **Pydantic v2 for all data validation** - Let it handle input validation
+- **Singletons for stateless clients** - Use factory patterns for connections
+- **Fail fast on uncertain inputs** - Don't over-validate guaranteed values
+- **One try/except per function** - Keep error handling simple
+- **Code should tell a story** - Prioritize readability and maintainability

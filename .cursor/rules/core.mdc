@@ -1,0 +1,121 @@
+---
+alwaysApply: false
+---
+
+# Core Development Philosophy
+
+**Universal Principle:** Write code with absolute clarity as the top priority. Choose the most straightforward solution that any developer can understand at first glance.
+
+---
+
+## Development Philosophy
+
+- **Delete, delete, delete:** The best feature is no feature. Ask "What happens if we don't build this at all?" before writing a single line.
+- **Complex = bad:** If it's complex, it sucks and needs to go. Simple systems win long-term.
+- **Build only what's needed today:** Don't implement features on speculation.
+- **Straightforward over clever:** Readable code beats short code. Implement in the simplest way possible without sacrificing clarity.
+- **Single Responsibility:** Each function, class, and module should do one clear thing.
+- **Five-minute rule:** If you can't explain it in 5 minutes, it's too complex.
+- **Write for humans first:** Clever code is bad code. Code that everyone can understand beats code that only experts can maintain.
+
+**Simple means:**
+
+- **Simple ≠ Short:** Verbose, descriptive code is better than terse, cryptic code
+- Understandable in under 30 seconds
+- Clear names: `calculateMonthlyPayment()` not `calc()`
+- Max three nesting levels → prefer early returns
+- Code should be self-documenting
+
+---
+
+## The Deletion Hierarchy
+
+**Nothing is better than something complex.** Users can't break what doesn't exist. Nothing has zero maintenance cost and infinite scalability.
+
+---
+
+## Core Principles
+
+### Readability First
+
+Code is read far more often than it is written. Every line will be read dozens of times by yourself and others.
+
+**Naming:**
+
+- Use descriptive, unambiguous names that explain intent
+- Names should be searchable and pronounceable
+- Use consistent vocabulary across the codebase
+
+### Don't Repeat Yourself
+
+- Extract repeated logic into private functions or helpers
+- Extract repeated UI markup into reusable components
+- Create utilities for common operations
+
+### Fail Fast & Simple
+
+- Validate only uncertain inputs (user input, API responses, external data)
+- Don't re-validate what the type system guarantees
+- One try/catch (or try/except) per function max
+- Never swallow errors silently
+- Log with context, then handle or re-raise
+
+### Architecture Patterns
+
+- **Function-first design:** Default to simple, pure functions organized in logical modules.
+- **Classes only when needed:** For singletons or true stateful objects.
+- **Separation of concerns:** Keep unrelated responsibilities apart. Modules and files should map cleanly to distinct purposes.
+- **Singletons** Follow these gudelines: ✅ Use for expensive, stateless clients (API/HTTP clients, external services). ❌ Avoid for database connections/sessions in Python — use dependency injection or factories for proper context management. ✅ In TypeScript, DB clients can be singletons for connection pooling, but keep minimal
+
+### Principle of Least Surprise
+
+Code should behave in the way other developers expect. Avoid clever tricks.
+
+---
+
+## Documentation & Comments
+
+### Docstrings
+
+- **Keep them simple.** A short sentence is enough.
+- **Say what the function does, not how.**
+- **Document inputs and outputs ONLY when not obvious.**
+- **Always document edge cases and error conditions.**
+
+```python
+# ❌ Too much detail
+def calculate_tax(amount: float, rate: float) -> float:
+    """
+    This function calculates tax by multiplying the amount with the tax rate,
+    converting the rate to a percentage by dividing by 100, and then returning the result.
+    """
+
+# ✅ Simple and clear
+def calculate_tax(amount: float, rate: float) -> float:
+    """Return tax for a given amount and percentage rate."""
+```
+
+### Comments
+
+- Comments explain **why**, not what.
+- Keep comments updated — outdated comments are worse than none.
+
+---
+
+## Practical Guidelines
+
+### File & Function Size
+
+- Functions should be short (under ~50 lines) and do one thing. These are maximums, not targets.
+- Files should stay manageable (<500 lines). Split if getting too long.
+- Classes should be small and represent a single entity.
+
+### Dependencies
+
+- Keep dependency count minimal.
+- Choose well-maintained, popular libraries with clear docs.
+- Prefer stable, established libraries over experimental ones.
+
+---
+
+**Remember:** Prioritize human understanding above all else. Choose verbose, clear code over clever one-liners. If someone needs more than 30 seconds to understand what a function does, rewrite it. Complexity is the enemy of execution. Simple solutions are easier to understand, maintain, debug, and scale.
