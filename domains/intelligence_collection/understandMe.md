@@ -1,53 +1,39 @@
-# Intelligence Collection Domain
+# Intelligence Collection Domain - Quick Reference
 
-## Purpose
+## Purpose (1-2 lines)
+Orchestrates end-to-end business intelligence gathering from websites and LinkedIn profiles.
+Processes user registrations and generates comprehensive analysis reports.
 
-The Intelligence Collection domain orchestrates the end-to-end process of gathering and analyzing business intelligence from user-provided data sources (websites and LinkedIn profiles).
+## Key Capabilities
+- `process_registration()` - Main workflow orchestration
+- `discover_company_urls()` - Website URL discovery
+- `filter_valuable_urls()` - AI-powered URL filtering
+- `extract_content()` - Content scraping and processing
+- `analyze_linkedin_profile()` - LinkedIn profile analysis
 
-## Domain Boundaries
+## Internal Structure
+- `common/` - Shared domain utilities and validation
+- `discovery/` - URL discovery using Firecrawl
+- `filtering/` - AI-powered URL scoring and classification
+- `extraction/` - Content extraction and processing
+- `linkedin/` - LinkedIn profile analysis and parsing
 
-**What's Inside:**
-- Registration data validation and processing
-- URL discovery and filtering for business intelligence value
-- Content extraction and analysis orchestration
-- Result aggregation and output generation
+## How It Works (5-10 lines max)
+1. User calls `process_registration()` with website/LinkedIn URLs
+2. Discovers all URLs on company website using Firecrawl
+3. Filters URLs for business intelligence value using AI
+4. Extracts content from valuable URLs in markdown format
+5. Analyzes LinkedIn profiles using ScrapingDog API
+6. Returns structured AnalysisOutput with all findings
 
-**What's Outside:**
-- External API integrations (handled by services layer)
-- Data persistence (handled by core utils)
-- HTTP request handling (handled by API layer)
-- Background job processing (handled by Inngest services)
+## Events Published
+- None (domain layer)
 
-## Core Workflow
+## Events Consumed
+- None (domain layer)
 
-```
-RegistrationRequest → Validate → Discover → Filter → Extract → Analyze → Save → AnalysisOutput
-```
-
-1. **Validate**: Ensure at least one data source (website or LinkedIn) is provided
-2. **Discover**: Find all URLs on the website using Firecrawl
-3. **Filter**: Identify URLs with business intelligence value
-4. **Extract**: Scrape content from valuable URLs
-5. **Analyze**: Process LinkedIn profiles and website content
-6. **Save**: Store analysis results to filesystem
-7. **Return**: Structured AnalysisOutput with all findings
-
-## Key Principles
-
-- **Single Responsibility**: Each function has one clear purpose
-- **Fail Fast**: Validate inputs early and clearly
-- **Pure Functions**: Business logic should be testable and predictable
-- **Clear Boundaries**: Domain doesn't know about external services directly
-- **Composable**: Functions can be combined in different workflows
-
-## Data Flow
-
-**Input**: `RegistrationRequest` with user data and URLs
-**Output**: `AnalysisOutput` with structured analysis results
-**Side Effects**: Files saved to outputs/ directory
-
-## Dependencies
-
-- **Core Layer**: For data models and utilities
-- **Services Layer**: For external API calls (Firecrawl, LinkedIn)
-- **No Direct Dependencies**: On HTTP, database, or background jobs 
+## Key Decisions
+- Pure functions for testability and composability
+- Clear separation from external services
+- Fail-fast validation at domain boundaries
+- Markdown format for downstream LLM processing 

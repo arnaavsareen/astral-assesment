@@ -2,131 +2,6 @@
 
 A FastAPI-based platform that collects and analyzes business intelligence from company websites and LinkedIn profiles. The system follows a domain-driven, function-first architecture and emphasizes absolute clarity, testability, and operational reliability.
 
-## Overview / Background
-
-This project tests the ability to problem solve, quickly internalize engineering principles, and build at a fast pace. At astral, nearly every problem we tackle is novel. We operate at the edge of what's possible through software and AI.
-
-We do not consider astral a typical startup. While we adopt Silicon Valley principles—building quickly, being relentlessly resourceful—we believe many core engineering values were lost in the recent AI boom. Everyone is chasing short-term gains without a meaningful technical moat. We're building something different: an experimentation lab for what's possible within the rapidly growing AI ecosystem.
-
-To dominate, we follow one maxim: wars are won with logistics and propaganda.
-
-For astral, "logistics" means systematically architecting AI-enhanced software across operations to maximize leverage. "Propaganda" means the ability to produce and distribute high-quality, educational content at scale. Advertising will become a commodity in the age of AI. The advantage is delivering individually tailored value through writing and visuals—helping people understand what new capabilities mean for them.
-
-This MVP demonstrates the first phase of that pipeline.
-
-## Engineering Principles
-
-You must read and understand the engineering principles. All work is evaluated against these standards.
-
-**Core Development Philosophy:** Write code with absolute clarity as the top priority. Choose the most straightforward solution that any developer can understand at first glance.
-
-**Key Themes Adopted:**
-- **Delete before you build:** The best feature is no feature. Ask "What happens if we don't build this at all?"
-- **Simple over clever:** If it's complex, it sucks and needs to go. Simple systems win long-term.
-- **Function-first design:** Default to simple, pure functions organized in logical modules.
-- **Single responsibility:** Each function, class, and module should do one clear thing.
-- **Fail fast & simple:** Validate only uncertain inputs, catch only what you can handle.
-- **Domains own business logic:** Services integrate external systems, API handles HTTP concerns.
-
-## What You'll Build
-
-A FastAPI application with two routers:
-- **Health checks:** Two GET endpoints at `/health` and `/health/detailed`
-- **Execution workflow:** A single POST endpoint `/register`
-
-**Request Contract (Pydantic v2):**
-- `first_name` (required)
-- `last_name` (required)
-- `company_website` (optional)
-- `linkedin` (optional)
-
-**Validation Rule:** At least one of `company_website` or `linkedin` must be provided, otherwise fail fast with a validation error.
-
-### Async & Reliable Queue Management (Inngest)
-
-Inngest handles background job processing without maintaining brokers/workers. The `/register` endpoint:
-1. Validates input and immediately enqueues an event `registration.received`
-2. Returns success or meaningful error immediately
-3. A background function processes the heavy workflow asynchronously
-
-**Why Inngest for this problem:**
-- **Reliability:** Automatic retries, exponential backoff, durable execution
-- **Observability:** Function logs, metrics, and retries visible in the Inngest dashboard
-- **Simplicity:** No Redis/RabbitMQ required; focus stays on business logic
-- **Asynchronous by default:** Ideal for I/O heavy scraping and API calls
-
-### Data Collection Logic
-
-There are three potential paths:
-- Website URL only
-- LinkedIn URL only
-- Both provided
-
-**Goal:** Learn as much as possible about the individual and their company.
-
-#### LinkedIn Implementation Plan
-
-We integrate ScrapingDog's LinkedIn API for profile data to avoid building a brittle scraper. The chosen approach reduces failure points and keeps the system simple.
-
-**Concise Integration Plan:**
-- Use ScrapingDog's LinkedIn endpoint with `type=profile` and `linkId` extracted from the URL
-- Normalize and validate LinkedIn URLs
-- If API key is missing, return mock profile data for development/testing
-- Analyze returned profile data into structured BI fields: profile summary, professional info, experience, education, content and network insights, business intelligence
-
-**Key Docs:** `https://www.scrapingdog.com/linkedin-scraper-api`
-
-#### Website Analysis (Firecrawl)
-
-Firecrawl is used for:
-- **URL Discovery** (map endpoint) — Fast, lightweight, and credit-efficient
-- **Content Scraping** (scrape endpoint) — Returns content in markdown format
-
-**Phases:**
-- **URL Discovery:** `services/firecrawl/client.py#map_website`
-- **Intelligent Filtering:** AI-powered scoring with fallback to pattern-based filtering
-- **Content Extraction:** Markdown format chosen for downstream LLM processing due to human-readability, structural fidelity, and low parsing cost
-
-If rate limits are encountered during development, the scraping calls can be mocked (as done in tests) while preserving end-to-end logic.
-
-### Inngest Integration Strategy
-
-- API triggers an Inngest event from `/register`
-- The background function `process-registration` orchestrates the entire pipeline
-- Retries and observability are handled by Inngest
-
-### Output Requirements
-
-Each `/register` call creates a JSON file in `outputs/` (no database). Filename format: `analysis_<request_id>_<timestamp>.json`.
-
-**Required Structure:**
-
-```json
-{
-  "request_id": "unique-identifier",
-  "timestamp": "2025-08-31T14:30:22Z",
-  "input_data": {
-    "first_name": "...",
-    "last_name": "...",
-    "company_website": "...",
-    "linkedin": "..."
-  },
-  "linkedin_analysis": {
-    "status": "success",
-    "profile_data": "..."
-  },
-  "website_analysis": {
-    "discovered_urls": ["list of all URLs found"],
-    "filtered_urls": ["URLs selected for scraping with filtering logic explained"],
-    "scraped_content": {
-      "url": "content in markdown format"
-    }
-  }
-}
-```
-
-**Critical Question:** Why Inngest here? Because reliability and observability are non-negotiable at scale. The ability to see, retry, and reason about background processes while keeping API latency low is central to the operational "logistics" necessary to win.
-
 ## Project Structure
 
 ```
@@ -267,7 +142,7 @@ astral-assesment/
 - pip
 - Node.js (for Inngest CLI)
 
-### Automated Setup (Recommended)
+### Automated Setup
 
 ```bash
 # Clone
@@ -370,20 +245,12 @@ Content-Type: application/json
 
 ## Running Tests
 
-### Using the Test Runner Script
-
 ```bash
-python run_tests.py quick      # Quick validation
-python run_tests.py core       # Business logic tests
-python run_tests.py all        # All tests
-```
-
-### Direct Pytest Usage
-
-```bash
-python -m pytest               # All tests
-python -m pytest tests/domains/intelligence_collection/ -v  # Domain tests
-python -m pytest tests/ -v --tb=short  # All tests with short tracebacks
+python -m pytest                    # All tests
+python -m pytest -v                 # Verbose
+python -m pytest -x                 # Stop on first failure
+python -m pytest tests/domains/     # Specific directory
+python -m pytest -k "linkedin"      # Test name pattern
 ```
 
 ### Test Coverage
@@ -393,13 +260,6 @@ The test suite includes **129 tests** covering all configurations:
 1. **Website URL only** - Tests company website analysis workflow
 2. **LinkedIn URL only** - Tests LinkedIn profile analysis workflow  
 3. **Both website and LinkedIn** - Tests combined analysis workflow
-
-### Test Categories
-
-- **API Tests** (31 tests): Health checks, registration endpoints, app configuration
-- **Core Tests** (25 tests): Pydantic models, validation, utilities
-- **Domain Tests** (42 tests): LinkedIn analysis, URL processing, workflows
-- **Integration Tests** (10 tests): End-to-end workflows, cross-domain communication
 
 For detailed test documentation, see [tests/README.md](tests/README.md).
 
@@ -423,7 +283,7 @@ The system is designed to work with small to mid-size companies that have:
 
 ## Current Status
 
-### ✅ **Fully Functional Features**
+### **Fully Functional Features**
 
 1. **Health Check System** - All services reporting healthy
 2. **Registration Workflow** - Complete end-to-end processing with background jobs
@@ -432,7 +292,7 @@ The system is designed to work with small to mid-size companies that have:
 5. **Error Handling** - Comprehensive error handling and logging
 6. **Testing** - 129 tests passing with full coverage
 
-### 🔧 **Architecture Compliance**
+### **Architecture Compliance**
 
 - **100% Domain-Driven Design** - Clean separation of concerns
 - **Function-First Architecture** - Pure functions with minimal classes
@@ -440,7 +300,7 @@ The system is designed to work with small to mid-size companies that have:
 - **understandMe.md Files** - Complete documentation for all layers
 - **Single Responsibility** - Each module has one clear purpose
 
-### 📊 **Performance Metrics**
+### **Performance Metrics**
 
 - **Test Coverage:** 129 tests passing
 - **Service Health:** All services healthy
@@ -448,36 +308,10 @@ The system is designed to work with small to mid-size companies that have:
 - **Background Jobs:** Processing successfully via Inngest
 - **File Output:** Clean, organized JSON files
 
-## Time Expectations and Priorities
-
-**Target completion:** 8–12 hours. Focus on core workflow and clear thinking over perfect prompts or exhaustive tuning. Keep momentum: research quickly, implement pragmatically, and ship working software.
-
-**Priorities:**
-- Don't over-engineer prompts or internals
-- Keep the core workflow functional end-to-end
-- Mock external APIs where useful during development
-- Document improvements for later if time-constrained
-
-## Deliverable and Evaluation Criteria
-
-The repository includes:
-- **A clear README** (this document)
-- **Working tests** for all configurations:
-  - Website only
-  - LinkedIn only
-  - Both provided
-- **Real company examples** (small to mid-size)
-- **Code structure** following astral-os guidelines while prioritizing working code
-- **100% architecture compliance** with all rules and principles
-
 ## Future Improvements
 
 - **Harden CORS and security** for production (restrict origins, add rate limiting)
 - **Structured logging** with request IDs and context everywhere
 - **Health checks** for external dependencies with circuit breakers
 - **Caching and backoff policies** tuned to vendor limits
-- **Additional data sources**; knowledge graph construction for multi-entity insights
-
-## License
-
-Add your preferred license here. 
+- **Additional data sources**; more people insights from different sources

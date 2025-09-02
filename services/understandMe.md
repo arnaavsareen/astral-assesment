@@ -2,35 +2,33 @@
 
 ## Purpose (1-2 lines)
 External service integrations and cross-cutting concerns.
-Handles API clients, background jobs, and external dependencies.
+Handles background jobs and external dependencies.
 
 ## Key Capabilities
-- `ai/` - OpenAI integration for intelligent analysis
-- `firecrawl/` - Web scraping and URL discovery
-- `linkedin/` - Profile analysis and intelligence extraction
 - `inngest/` - Background job processing and orchestration
+- `inngest/client.py` - Inngest client for event publishing
+- `inngest/functions.py` - Background job function definitions
 
 ## Internal Structure
-- `ai/` - AI service client with singleton pattern
-- `firecrawl/` - Web scraping API client
-- `linkedin/` - LinkedIn profile analysis tools
-- `inngest/` - Background job management
+- `inngest/` - Background job management with Inngest
+- `inngest/client.py` - Singleton Inngest client instance
+- `inngest/functions.py` - Workflow function definitions
 
 ## How It Works (5-10 lines max)
-1. Each service provides clean, focused APIs
-2. Singleton patterns for expensive clients
-3. Comprehensive error handling and logging
-4. Async support for performance
+1. Inngest client publishes events for background processing
+2. Functions define workflows triggered by specific events
+3. Singleton pattern for expensive client connections
+4. Async support for performance and scalability
 5. Clean separation from business logic
 
 ## Events Published
-- None (service layer, not domain)
+- `registration.received` - Triggers background processing
 
 ## Events Consumed
-- None (service layer, not domain)
+- None (service layer)
 
 ## Key Decisions
-- Singleton pattern for stateless API clients
+- Inngest for reliable background job processing
+- Singleton pattern for stateless clients
 - Async-first design for performance
-- Comprehensive error handling and fallbacks
 - Clean interfaces for domain consumption 

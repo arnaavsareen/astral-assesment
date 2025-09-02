@@ -5,10 +5,10 @@ HTTP interface layer exposing domain functionality through REST endpoints.
 Handles request/response, triggers background jobs, no business logic.
 
 ## Key Capabilities
-- `/health` - Basic health check
+- `/health` - Basic health check endpoint
 - `/health/detailed` - Comprehensive system status
 - `/register` - User registration triggering background processing
-- `/api/inngest` - Webhook endpoint for background job processing
+- `/docs` - OpenAPI documentation and testing interface
 
 ## Internal Structure
 - `main.py` - FastAPI application setup and lifespan management
@@ -16,12 +16,18 @@ Handles request/response, triggers background jobs, no business logic.
 - `routers/health.py` - Health check endpoints
 - `routers/register.py` - Registration endpoint
 
-## How It Works
+## How It Works (5-10 lines max)
 1. FastAPI app receives HTTP request
 2. Router validates input using Pydantic models
 3. Triggers Inngest event for background processing
 4. Returns immediate response with request_id
 5. Background job processes asynchronously
+
+## Events Published
+- None (triggers Inngest events)
+
+## Events Consumed
+- None (HTTP layer)
 
 ## Key Decisions
 - FastAPI for modern async Python web framework

@@ -61,23 +61,29 @@ FIRECRAWL_API_KEY=your_firecrawl_key_here
 SCRAPINGDOG_API_KEY=your_scrapingdog_key_here
 INNGEST_EVENT_KEY=your_inngest_key_here
 INNGEST_SERVE_URL=your_inngest_url_here
+
+# Optional: AI Configuration
+OPENAI_API_KEY=your_openai_key_here
+
+# Development Settings
+DEBUG=true
+LOG_LEVEL=INFO
+HOST=0.0.0.0
+PORT=8000
 EOF
     echo "✅ .env file created (update with your API keys)"
 else
     echo "✅ .env file already exists"
 fi
 
-# Run quick test to verify setup
-echo "🧪 Running quick test to verify setup..."
-python run_tests.py quick
-
 echo ""
 echo "🎉 Setup completed successfully!"
 echo ""
 echo "Next steps:"
 echo "1. Update .env file with your API keys"
-echo "2. Run the application: uvicorn api.main:app --reload"
-echo "3. Access API docs: http://localhost:8000/docs"
-echo "4. Run tests: python run_tests.py all"
+echo "2. Run one terminal: export INNGEST_DEV=1 && uvicorn api.main:app --reload --host 0.0.0.0 --port 8000"
+echo "3. Run the other terminal: npx inngest-cli@latest dev"
+echo "4. Access API docs: http://localhost:8000/docs"
+echo "5. Run tests: python -m pytest"
 echo ""
 echo "Happy coding! 🚀" 
