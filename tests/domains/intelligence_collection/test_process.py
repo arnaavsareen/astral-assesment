@@ -1,13 +1,22 @@
-"""Tests for intelligence collection domain process_registration function."""
+# ==============================================================================
+# test_process.py — Intelligence collection process workflow tests
+# ==============================================================================
+# Purpose: Test the complete intelligence collection workflow and data processing pipeline
+# Sections: Imports, Test Configuration, Workflow Tests, Mock Setup
+# ==============================================================================
 
-import pytest
-from unittest.mock import AsyncMock, patch, MagicMock
+# Standard Library --------------------------------------------------------------
+import asyncio
 from datetime import datetime, timezone
-from typing import Dict, Any
+from typing import Any, Dict, List, Optional
+from unittest.mock import AsyncMock, MagicMock, patch
 
-# Domain imports
+# Third Party -------------------------------------------------------------------
+import pytest
+
+# Core (App-wide) ---------------------------------------------------------------
+from core.types.models import AnalysisOutput, RegistrationRequest
 from domains.intelligence_collection import process_registration
-from core.types.models import RegistrationRequest, AnalysisOutput
 
 
 @pytest.fixture

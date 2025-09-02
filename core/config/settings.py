@@ -1,6 +1,15 @@
-"""Application configuration settings using Pydantic v2."""
+# ==============================================================================
+# settings.py — Application configuration and environment management
+# ==============================================================================
+# Purpose: Centralized configuration management for environment variables and app settings
+# Sections: Imports, Environment Configuration, Settings Classes, Validation
+# ==============================================================================
 
+# Standard Library --------------------------------------------------------------
+import os
 from typing import Optional
+
+# Third Party -------------------------------------------------------------------
 from pydantic import Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
@@ -26,7 +35,7 @@ class Settings(BaseSettings):
     
     # ScrapingDog configuration
     scrapingdog_api_key: Optional[str] = Field(default=None, description="ScrapingDog API key for LinkedIn scraping")
-    scrapingdog_premium_proxy: bool = Field(default=False, description="Use premium proxies for ScrapingDog")
+    scrapingdog_premium_proxy: bool = Field(default=True, description="Use premium proxies for ScrapingDog")
     scrapingdog_max_retries: int = Field(default=3, description="Maximum retry attempts for ScrapingDog API")
     scrapingdog_timeout: int = Field(default=30, description="Request timeout in seconds for ScrapingDog API")
     

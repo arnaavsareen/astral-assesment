@@ -1,28 +1,24 @@
-"""Async JSON file handling utilities for analysis outputs."""
+# ==============================================================================
+# json_handler.py — JSON serialization and deserialization utilities
+# ==============================================================================
+# Purpose: Provide robust JSON handling with error handling and validation
+# Sections: Imports, JSON Processing Functions, Error Handling, Validation
+# ==============================================================================
 
+# Standard Library --------------------------------------------------------------
 import json
+import logging
 import os
 from datetime import datetime
 from pathlib import Path
-from typing import Any, Dict
+from typing import Any, Dict, List, Optional, Union
+
+# Third Party -------------------------------------------------------------------
 import aiofiles
 
 
 async def save_analysis(analysis_data: Dict[str, Any], request_id: str) -> str:
-    """
-    Save analysis data as JSON file to outputs directory.
-    
-    Args:
-        analysis_data: Dictionary containing analysis results
-        request_id: Unique identifier for the request
-        
-    Returns:
-        Path to the saved JSON file
-        
-    Raises:
-        OSError: If unable to create directory or write file
-        TypeError: If analysis_data is not serializable
-    """
+    """Save analysis data as JSON file to outputs directory."""
     # 1️⃣ Create outputs directory if it doesn't exist ----
     outputs_dir = Path("outputs")
     outputs_dir.mkdir(exist_ok=True)

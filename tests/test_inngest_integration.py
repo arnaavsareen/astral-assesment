@@ -1,12 +1,22 @@
-"""Test Inngest integration and event triggering."""
+# ==============================================================================
+# test_inngest_integration.py — Inngest service integration tests
+# ==============================================================================
+# Purpose: Test Inngest workflow orchestration and event processing functionality
+# Sections: Imports, Test Configuration, Integration Tests, Mock Setup
+# ==============================================================================
 
+# Standard Library --------------------------------------------------------------
 import pytest
-import asyncio
 from unittest.mock import AsyncMock, patch
+from typing import Dict, Any
+
+# Third Party -------------------------------------------------------------------
 from fastapi.testclient import TestClient
+
+# Core (App-wide) ---------------------------------------------------------------
 from api.main import app
-from services.inngest.client import inngest_client
 from core.types.models import RegistrationRequest
+from services.inngest import inngest_client
 
 # Create test client
 client = TestClient(app)
@@ -16,7 +26,7 @@ class TestInngestIntegration:
     """Test Inngest event triggering and background processing."""
 
     def test_register_endpoint_triggers_inngest_event(self):
-        """Test that /register endpoint properly triggers Inngest event."""
+        """Test that /register endpoint successfully triggers Inngest event."""
         # Arrange
         test_data = {
             "first_name": "John",
@@ -72,14 +82,17 @@ class TestInngestIntegration:
             response_data = response.json()
             assert response_data["detail"]["error"] == "Background processing failed"
             assert "Failed to queue registration for processing" in response_data["detail"]["message"]
+            
+            # Verify Inngest event was attempted
+            mock_send.assert_called_once()
 
     def test_register_endpoint_validation_failure(self):
-        """Test that /register endpoint fails early on validation errors."""
-        # Arrange - Missing required URLs
+        """Test that /register endpoint handles validation failures properly."""
+        # Arrange
         test_data = {
-            "first_name": "John",
+            "first_name": "",  # Invalid: empty first name
             "last_name": "Doe"
-            # Missing both company_website and linkedin
+            # Missing required fields
         }
         
         # Act
@@ -88,7 +101,12 @@ class TestInngestIntegration:
         # Assert
         assert response.status_code == 422  # Pydantic validation error
         response_data = response.json()
-        assert "value error" in response_data["detail"][0]["msg"].lower()
+        # Check for validation error in the detail array
+        assert len(response_data["detail"]) > 0
+        error_detail = response_data["detail"][0]
+        assert "msg" in error_detail
+        # The error message should contain information about the validation failure
+        assert "should have at least 1 character" in error_detail["msg"]
 
     def test_register_endpoint_with_linkedin_only(self):
         """Test that /register endpoint works with LinkedIn URL only."""
@@ -118,7 +136,7 @@ class TestInngestIntegration:
             assert event.data["registration_data"]["company_website"] is None
 
     def test_register_endpoint_with_both_urls(self):
-        """Test that /register endpoint works with both URLs provided."""
+        """Test that /register endpoint works with both company website and LinkedIn."""
         # Arrange
         test_data = {
             "first_name": "Bob",

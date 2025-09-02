@@ -1,8 +1,16 @@
-"""Pydantic models for data validation and serialization."""
+# ==============================================================================
+# models.py — Core data models and type definitions
+# ==============================================================================
+# Purpose: Centralized Pydantic models for data validation and API request/response structures
+# Sections: Imports, Base Models, Request Models, Response Models, Validation Rules
+# ==============================================================================
 
+# Standard Library --------------------------------------------------------------
 from datetime import datetime, timezone
-from typing import Optional
-from pydantic import BaseModel, HttpUrl, field_validator, Field
+from typing import Any, Dict, List, Optional
+
+# Third Party -------------------------------------------------------------------
+from pydantic import BaseModel, ConfigDict, EmailStr, Field, HttpUrl, field_validator
 
 
 class RegistrationRequest(BaseModel):
@@ -14,7 +22,7 @@ class RegistrationRequest(BaseModel):
     linkedin: Optional[HttpUrl] = Field(None, description="LinkedIn profile URL")
     
     def model_post_init(self, __context) -> None:
-        """Validate that at least one URL is provided after model initialization."""
+        """Ensure at least one URL is provided."""
         if not self.company_website and not self.linkedin:
             raise ValueError("At least one URL (company_website or linkedin) must be provided")
 

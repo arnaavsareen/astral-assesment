@@ -1,38 +1,28 @@
-# Core Architecture Quick Reference
+# Core Layer - Quick Reference
 
-## Domain-Driven Design Layers
+## Purpose (1-2 lines)
+Shared utilities, configuration, and types used across the application.
+Foundation layer providing common functionality without business logic.
 
-**Core Layer** - Pure business logic, no external dependencies
-- `config/` - Application configuration and settings
-- `types/` - Pydantic models for data validation
-- `utils/` - Pure utility functions
+## Key Capabilities
+- `config/settings.py` - Application configuration from environment
+- `types/models.py` - Pydantic v2 models for data validation
+- `utils/json_handler.py` - Async JSON file operations
+- `utils/url_utils.py` - URL normalization and validation
 
-## Key Patterns
+## Internal Structure
+- `config/` - Settings and environment management
+- `types/` - Data models and validation schemas
+- `utils/` - Pure utility functions with no side effects
 
-**Settings Management**
-- Pydantic v2 Settings for type-safe config
-- Environment variables loaded from .env
-- Validation on startup
+## How It Works
+1. Settings load from .env on startup via pydantic-settings
+2. Models validate data at API boundaries using Pydantic v2
+3. Utilities provide pure functions for common operations
+4. All domains and services can depend on core
 
-**Data Models**
-- Pydantic v2 models with strict validation
-- HttpUrl fields for URL validation
-- Custom validators for business rules
-
-**File Operations**
-- Async JSON handling for analysis outputs
-- Structured output to outputs/ directory
-- Error handling with context
-
-**URL Utilities**
-- URL normalization for consistency
-- Business intelligence URL detection
-- Pure functions with no side effects
-
-## Development Principles
-
-- Functions under 50 lines max
-- Single responsibility per function
-- Descriptive names over short ones
-- Fail fast with clear error messages
-- No external dependencies in core layer 
+## Key Decisions
+- Pydantic v2 for all data validation
+- Settings from environment variables only
+- Pure functions with no external dependencies
+- Type hints on everything for clarity 

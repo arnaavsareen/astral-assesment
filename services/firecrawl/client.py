@@ -1,9 +1,19 @@
-"""Firecrawl client wrapper for web scraping and URL discovery."""
+# ==============================================================================
+# client.py — Firecrawl web scraping service client
+# ==============================================================================
+# Purpose: Client for Firecrawl web scraping service with async support
+# Sections: Imports, Client Configuration, Scraping Methods, Response Processing
+# ==============================================================================
 
+# Standard Library --------------------------------------------------------------
 import asyncio
 import logging
 from typing import List, Optional
+
+# Third Party -------------------------------------------------------------------
 import httpx
+
+# Core (App-wide) ---------------------------------------------------------------
 from core.config.settings import settings
 
 # Configure logging
@@ -44,28 +54,12 @@ class FirecrawlClient:
         return bool(self.api_key and self.api_key.strip())
     
     async def map_website(self, url: str) -> List[str]:
-        """
-        Discover URLs using Firecrawl's map endpoint.
-        
-        Map is optimal because:
-        1. Extremely fast - designed for getting site structure
-        2. Lighter on credits than crawl
-        3. Returns all URLs without content (perfect for filtering first)
-        
-        Args:
-            url: Base URL of the website to map
-            
-        Returns:
-            List of discovered URLs
-            
-        Raises:
-            ValueError: If no API key is provided
-            httpx.HTTPStatusError: If API call fails
-        """
+        """Discover URLs using Firecrawl's map endpoint for fast site structure."""
         if not self._has_api_key():
             raise ValueError("Firecrawl API key required for URL discovery")
         
         try:
+            # 1️⃣ Prepare HTTP client and request ----
             async with httpx.AsyncClient() as client:
                 response = await client.post(
                     f"{self._base_url}/map",
@@ -76,9 +70,9 @@ class FirecrawlClient:
                 response.raise_for_status()
                 data = response.json()
                 
-                logger.debug(f"Firecrawl map API response: {data}")
+                logger.debug("Firecrawl map API response received", extra={"response_keys": list(data.keys())})
                 
-                # Extract URLs from map response based on documented structure
+                # 2️⃣ Extract URLs from response data ----
                 urls = []
                 if "links" in data:
                     # Extract URLs from links array
@@ -88,30 +82,19 @@ class FirecrawlClient:
                         elif isinstance(link, str):
                             urls.append(link)
                 
-                logger.info(f"Discovered {len(urls)} URLs for {url}")
+                # 3️⃣ Log results and return ----
+                logger.info("Discovered URLs", extra={"urls_discovered": len(urls), "source_url": url})
                 return urls
                 
         except httpx.HTTPStatusError as e:
-            logger.error(f"Map API call failed for {url}: HTTP {e.response.status_code}")
+            logger.error("Map API call failed", extra={"url": url, "status_code": e.response.status_code})
             raise
         except Exception as e:
-            logger.error(f"Unexpected error during map API call for {url}: {e}")
+            logger.error("Unexpected error during map API call", extra={"url": url, "error": str(e)})
             raise
     
     async def scrape_url(self, url: str) -> str:
-        """
-        Scrape single URL using Firecrawl's scrape endpoint.
-        
-        Args:
-            url: URL to scrape
-            
-        Returns:
-            Scraped content in markdown format
-            
-        Raises:
-            ValueError: If no API key is provided
-            httpx.HTTPStatusError: If API call fails
-        """
+        """Scrape single URL using Firecrawl's scrape endpoint."""
         if not self._has_api_key():
             raise ValueError("Firecrawl API key required for content scraping")
         
@@ -132,6 +115,7 @@ class FirecrawlClient:
             httpx.HTTPStatusError: If API call fails after all retries
         """
         try:
+            # 1️⃣ Prepare HTTP client and request ----
             async with httpx.AsyncClient() as client:
                 response = await client.post(
                     f"{self._base_url}/scrape",
@@ -143,32 +127,34 @@ class FirecrawlClient:
                     timeout=35.0  # Slightly longer than API timeout
                 )
                 
+                # 2️⃣ Handle rate limiting with exponential backoff ----
                 if response.status_code == 429:  # Rate limited
                     if attempt < 3:
                         wait_time = 2 ** attempt  # 1s, 2s, 4s
-                        logger.warning(f"Rate limited for {url}, waiting {wait_time}s (attempt {attempt + 1}/3)")
+                        logger.warning("Rate limited, waiting", extra={"url": url, "attempt": attempt + 1, "max_attempts": 3, "wait_time": wait_time})
                         await asyncio.sleep(wait_time)
                         return await self._scrape_with_backoff(url, attempt + 1)
-                    logger.error(f"Rate limit exceeded for {url} after 3 attempts")
+                    logger.error("Rate limit exceeded after all attempts", extra={"url": url, "max_attempts": 3})
                     raise httpx.HTTPStatusError("Rate limit exceeded", request=None, response=response)
                 
+                # 3️⃣ Validate response and extract content ----
                 response.raise_for_status()
                 data = response.json()
                 
                 # Extract markdown content
                 if "data" in data and "markdown" in data["data"]:
                     content = data["data"]["markdown"]
-                    logger.debug(f"Successfully scraped {url} ({len(content)} characters)")
+                    logger.debug("Successfully scraped URL", extra={"url": url, "content_length": len(content)})
                     return content
                 else:
-                    logger.warning(f"No markdown content found in response for {url}")
+                    logger.warning("No markdown content found in response", extra={"url": url, "response_keys": list(data.keys())})
                     raise ValueError(f"No markdown content available for: {url}")
                     
         except httpx.HTTPStatusError as e:
-            logger.error(f"HTTP error scraping {url}: {e.response.status_code}")
+            logger.error("HTTP error scraping URL", extra={"url": url, "status_code": e.response.status_code})
             raise
         except Exception as e:
-            logger.error(f"Scrape failed for {url}: {e}")
+            logger.error("Scrape failed", extra={"url": url, "error": str(e)})
             raise
 
 

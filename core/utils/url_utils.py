@@ -1,26 +1,21 @@
-"""URL utility functions for normalization and business intelligence detection."""
+# ==============================================================================
+# url_utils.py — URL validation and manipulation utilities
+# ==============================================================================
+# Purpose: Provide URL parsing, validation, and transformation functions
+# Sections: Imports, URL Validation, URL Parsing, URL Transformation
+# ==============================================================================
 
+# Standard Library --------------------------------------------------------------
 import re
-from urllib.parse import urlparse, urlunparse, urljoin
-from typing import Optional
+from typing import Any, Dict, List, Optional
+from urllib.parse import urljoin, urlparse, urlunparse
+
+# Third Party -------------------------------------------------------------------
+from pydantic import HttpUrl, ValidationError
 
 
 def normalize_url(url: str) -> str:
-    """
-    Normalize URL to consistent format.
-    
-    Args:
-        url: Raw URL string to normalize
-        
-    Returns:
-        Normalized URL string
-        
-    Examples:
-        >>> normalize_url("https://www.example.com/path?param=value#fragment")
-        "https://www.example.com/path?param=value#fragment"
-        >>> normalize_url("example.com")
-        "https://example.com"
-    """
+    """Normalize URL to consistent format with scheme and lowercase components."""
     # 1️⃣ Normalize scheme to lowercase first ----
     url_lower = url.lower()
     if url_lower.startswith('http://'):
@@ -47,21 +42,7 @@ def normalize_url(url: str) -> str:
 
 
 def is_business_intelligence_url(url: str) -> bool:
-    """
-    Check if URL is likely a business intelligence or analytics platform.
-    
-    Args:
-        url: URL string to check
-        
-    Returns:
-        True if URL appears to be a BI platform
-        
-    Examples:
-        >>> is_business_intelligence_url("https://app.powerbi.com/report")
-        True
-        >>> is_business_intelligence_url("https://example.com")
-        False
-    """
+    """Check if URL is likely a business intelligence or analytics platform."""
     # 1️⃣ Normalize URL for consistent checking ----
     normalized_url = normalize_url(url).lower()
     

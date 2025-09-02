@@ -1,14 +1,31 @@
+# ==============================================================================
+# main.py — FastAPI application entry point and configuration
+# ==============================================================================
+# Purpose: Main FastAPI application setup, middleware configuration, and router registration
+# Sections: Imports, App Configuration, Middleware, Router Registration, Main Entry
+# ==============================================================================
+
 """Main FastAPI application for astral-assessment."""
 
+# Standard Library --------------------------------------------------------------
 import logging
 from contextlib import asynccontextmanager
+
+# Third Party -------------------------------------------------------------------
+import inngest
+import inngest.fast_api
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
-import inngest
-import inngest.fast_api
+
+# Core (App-wide) ---------------------------------------------------------------
 from core.config.settings import settings
-from services.inngest.client import inngest_client
+# Service layer imports
+from services.inngest import inngest_client
+
+# Internal (Current Module) -----------------------------------------------------
+from api.routers import health, register
+import services.inngest.functions
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -17,22 +34,20 @@ logger = logging.getLogger(__name__)
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    """Application lifespan manager for startup and shutdown events."""
+    """Manage application startup and shutdown lifecycle."""
     # Startup
-    logger.info(f"Starting {settings.app_name} v{settings.app_version}")
+    logger.info("Starting application", extra={"app_name": settings.app_name, "app_version": settings.app_version})
     
     # Verify Inngest client is initialized
     try:
-        logger.info(f"Inngest app ID: {inngest_client.app_id}")
-        logger.info("✅ Inngest client initialized successfully")
+        inngest_client = services.inngest.client.inngest_client
+        logger.info("Inngest client initialized", extra={"app_id": inngest_client.app_id})
     except Exception as e:
-        logger.error(f"❌ Inngest client initialization failed: {e}")
+        logger.error("Inngest client initialization failed", extra={"error": str(e)})
         raise
     
     # Verify settings are loaded
-    logger.info(f"Environment: {settings.environment}")
-    logger.info(f"App name: {settings.app_name}")
-    logger.info(f"App version: {settings.app_version}")
+    logger.info("Application configuration loaded", extra={"environment": settings.environment, "app_name": settings.app_name, "app_version": settings.app_version})
     
     logger.info("🚀 Application startup completed successfully")
     
@@ -63,7 +78,7 @@ app.add_middleware(
 @app.exception_handler(Exception)
 async def global_exception_handler(request: Request, exc: Exception):
     """Handle unhandled exceptions globally."""
-    logger.error(f"Unhandled exception: {exc}", exc_info=True)
+    logger.error("Unhandled exception", extra={"error": str(exc)}, exc_info=True)
     
     return JSONResponse(
         status_code=500,
@@ -75,17 +90,17 @@ async def global_exception_handler(request: Request, exc: Exception):
     )
 
 # Include routers from api.routers
-from api.routers import health, register
-
-# Include routers
 app.include_router(health.router)
 app.include_router(register.router)
 
 # Import Inngest functions to register them
-import services.inngest.functions
-
 # Serve the Inngest endpoint using the proper FastAPI integration
-inngest.fast_api.serve(app, inngest_client, [services.inngest.functions.process_registration_task])
+inngest.fast_api.serve(
+    app, 
+    inngest_client, 
+    [services.inngest.functions.process_registration_task],
+    serve_path="/api/inngest"  # Explicitly mount at /api/inngest as required
+)
 
 
 # Root endpoint

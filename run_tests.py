@@ -1,14 +1,17 @@
-#!/usr/bin/env python3
-"""
-Test Runner Script for Astral Assessment
+# ==============================================================================
+# run_tests.py — Test runner and execution utilities
+# ==============================================================================
+# Purpose: Main entry point for running tests with custom configuration and reporting
+# Sections: Imports, Test Configuration, Main Execution, Utility Functions
+# ==============================================================================
 
-This script provides easy commands for running different test categories.
-"""
-
-import sys
-import subprocess
+# Standard Library --------------------------------------------------------------
 import argparse
+import os
+import subprocess
+import sys
 from pathlib import Path
+from typing import List, Optional
 
 
 def run_command(cmd: str, description: str) -> bool:

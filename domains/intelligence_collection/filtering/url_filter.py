@@ -1,11 +1,20 @@
-"""Intelligent URL filtering module using AI for business intelligence scoring."""
+# ==============================================================================
+# url_filter.py — URL filtering and classification logic
+# ==============================================================================
+# Purpose: Filter and classify URLs based on business intelligence criteria and relevance
+# Sections: Imports, Filtering Rules, Classification Logic, Business Intelligence Detection
+# ==============================================================================
 
+# Standard Library --------------------------------------------------------------
 import logging
-from typing import List, Dict, Tuple
+from typing import Dict, List, Tuple, Any
 from urllib.parse import urlparse
 
-# Import AI client for intelligent scoring
-from services.ai.client import ai_client
+# Third Party -------------------------------------------------------------------
+# (none)
+
+# Core (App-wide) ---------------------------------------------------------------
+from services.ai import ai_client
 
 # Configure logging
 logger = logging.getLogger(__name__)
@@ -13,46 +22,29 @@ logger = logging.getLogger(__name__)
 
 async def filter_valuable_urls(
     urls: List[str], 
-    company_context: Dict[str, str],
-    max_urls: int = 7
-) -> List[Dict[str, str]]:
-    """
-    Main entry point for intelligent URL filtering.
-    
-    Uses AI to score URLs for business intelligence value, then ensures
-    category diversity in the final selection.
-    
-    Args:
-        urls: List of URLs to filter
-        company_context: Company context for AI scoring
-        max_urls: Maximum number of URLs to return (default: 7)
-        
-    Returns:
-        List of dictionaries with: url, score, reason, category
-        
-    Strategy:
-    1. AI-powered scoring for nuanced business intelligence assessment
-    2. Fallback to pattern-based scoring if AI fails
-    3. Category diversity algorithm to ensure balanced coverage
-    4. Always return max_urls even if some scoring fails
-    """
+    company_context: Dict[str, str], 
+    max_urls: int = 10
+) -> List[Dict[str, Any]]:
+    """Filter URLs using AI scoring and ensure category diversity."""
     if not urls:
         return []
     
     try:
-        # 1️⃣ AI-powered scoring ----
-        logger.info("Starting AI-powered URL scoring")
-        scored_urls = await ai_client.score_urls_for_business_intelligence(urls, str(company_context))
+        # 1️⃣ Convert company context to string for AI client ----
+        context_string = str(company_context)
+        
+        # AI-powered scoring
+        scored_urls = await ai_client.score_urls_for_business_intelligence(urls, context_string)
+        logger.info("AI scoring successful", extra={"urls_selected": len(selected_urls)})
         
         # 2️⃣ Apply diversity algorithm ----
         selected_urls = _ensure_diversity(scored_urls, max_urls)
         
-        logger.info(f"AI scoring successful: {len(selected_urls)} URLs selected")
+        logger.info("AI scoring successful", extra={"urls_selected": len(selected_urls)})
         return selected_urls
         
     except Exception as e:
-        # 3️⃣ Fallback to pattern-based filtering ----
-        logger.warning(f"AI scoring failed, using fallback: {e}")
+        logger.warning("AI scoring failed, using fallback", extra={"error": str(e)})
         return _fallback_filter(urls, max_urls)
 
 
@@ -60,22 +52,7 @@ def _ensure_diversity(
     scored_urls: List[Dict], 
     max_urls: int
 ) -> List[Dict]:
-    """
-    Ensure category diversity in selected URLs.
-    
-    Strategy:
-    - Sort by score descending
-    - Track categories seen
-    - Max 2 URLs per category
-    - Fill remaining slots with highest scores
-    
-    Args:
-        scored_urls: List of scored URLs with category info
-        max_urls: Maximum URLs to return
-        
-    Returns:
-        Diverse selection of URLs maintaining quality
-    """
+    """Ensure category diversity in selected URLs with max 2 per category."""
     if not scored_urls:
         return []
     
@@ -103,7 +80,7 @@ def _ensure_diversity(
         remaining_urls = [u for u in scored_urls if u not in selected_urls]
         selected_urls.extend(remaining_urls[:max_urls - len(selected_urls)])
     
-    logger.info(f"Diversity algorithm selected {len(selected_urls)} URLs across {len(category_counts)} categories")
+    logger.info("Diversity algorithm selected URLs", extra={"urls_selected": len(selected_urls), "categories_covered": len(category_counts)})
     return selected_urls
 
 
@@ -142,7 +119,7 @@ def _fallback_filter(
     scored_urls.sort(key=lambda x: x["score"], reverse=True)
     selected_urls = scored_urls[:max_urls]
     
-    logger.info(f"Fallback filtering selected {len(selected_urls)} URLs")
+    logger.info("Fallback filtering selected URLs", extra={"urls_selected": len(selected_urls)})
     return selected_urls
 
 

@@ -1,13 +1,26 @@
-"""Health check router for API endpoints."""
+# ==============================================================================
+# health.py — Health check and system status endpoints
+# ==============================================================================
+# Purpose: Provide health check endpoints for monitoring and system status verification
+# Sections: Imports, Health Check Endpoints, Status Validation
+# ==============================================================================
 
-import sys
+# Standard Library --------------------------------------------------------------
 import platform
+import sys
 from datetime import datetime
 from typing import Dict, Any
+
+# Third Party -------------------------------------------------------------------
 from fastapi import APIRouter, HTTPException
+
+# Core (App-wide) ---------------------------------------------------------------
 from core.config.settings import settings
-from services.inngest.client import inngest_client
-from services.firecrawl.client import firecrawl_client
+# Service layer imports
+from services.firecrawl import firecrawl_client
+from services.inngest import inngest_client
+from services.linkedin import analyze_linkedin_profile
+from services.ai import ai_client
 
 # Create router with proper tags
 router = APIRouter(
@@ -19,12 +32,7 @@ router = APIRouter(
 
 @router.get("")
 async def health_check() -> Dict[str, str]:
-    """
-    Basic health check endpoint.
-    
-    Returns:
-        Basic health status with timestamp
-    """
+    """Basic health check endpoint returning status and timestamp."""
     return {
         "status": "healthy",
         "timestamp": datetime.utcnow().isoformat()
@@ -67,14 +75,47 @@ async def _check_firecrawl_service() -> Dict[str, Any]:
         }
 
 
+async def _check_linkedin_service() -> Dict[str, Any]:
+    """Check LinkedIn service availability."""
+    try:
+        # Check if LinkedIn service is properly initialized
+        from services.linkedin.scrapingdog_client import ScrapingDogClient
+        client = ScrapingDogClient()
+        has_api_key = client._has_api_key()
+        return {
+            "status": "healthy" if has_api_key else "limited",
+            "has_api_key": has_api_key,
+            "details": "LinkedIn service initialized successfully" if has_api_key else "LinkedIn service initialized (no API key - limited functionality)"
+        }
+    except Exception as e:
+        return {
+            "status": "unhealthy",
+            "error": str(e),
+            "details": "LinkedIn service initialization failed"
+        }
+
+
+async def _check_ai_service() -> Dict[str, Any]:
+    """Check AI service availability."""
+    try:
+        # Check if AI client is properly initialized
+        has_api_key = ai_client._has_api_key()
+        return {
+            "status": "healthy" if has_api_key else "limited",
+            "has_api_key": has_api_key,
+            "details": "AI service initialized successfully" if has_api_key else "AI service initialized (no API key - limited functionality)"
+        }
+    except Exception as e:
+        return {
+            "status": "unhealthy",
+            "error": str(e),
+            "details": "AI service initialization failed"
+        }
+
+
 @router.get("/detailed")
 async def detailed_health_check() -> Dict[str, Any]:
-    """
-    Detailed health check endpoint with comprehensive system information.
-    
-    Returns:
-        Detailed health status including app info, service statuses, and system info
-    """
+    """Detailed health check with comprehensive system information."""
     # 1️⃣ Basic app information ----
     app_info = {
         "app_name": settings.app_name,
@@ -86,7 +127,9 @@ async def detailed_health_check() -> Dict[str, Any]:
     # 2️⃣ Service status checks ----
     service_statuses = {
         "inngest": await _check_inngest_service(),
-        "firecrawl": await _check_firecrawl_service()
+        "firecrawl": await _check_firecrawl_service(),
+        "linkedin": await _check_linkedin_service(),
+        "ai": await _check_ai_service()
     }
     
     # 3️⃣ System information ----
@@ -108,7 +151,7 @@ async def detailed_health_check() -> Dict[str, Any]:
     if unhealthy_services:
         overall_status = "unhealthy"
     elif limited_services:
-        overall_status = "degraded"
+        overall_status = "limited"
     
     return {
         "status": overall_status,

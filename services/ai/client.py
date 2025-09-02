@@ -1,9 +1,19 @@
-"""AI service client for intelligent operations using OpenAI."""
+# ==============================================================================
+# client.py — AI service client and integration
+# ==============================================================================
+# Purpose: Client for AI services including OpenAI and other AI providers
+# Sections: Imports, AI Client Configuration, API Integration, Response Handling
+# ==============================================================================
 
+# Standard Library --------------------------------------------------------------
 import json
 import logging
-from typing import List, Dict, Any, Optional
+from typing import Any, Dict, List, Optional
+
+# Third Party -------------------------------------------------------------------
 import httpx
+
+# Core (App-wide) ---------------------------------------------------------------
 from core.config.settings import settings
 
 # Configure logging
@@ -48,57 +58,29 @@ class AIClient:
         urls: List[str],
         context: str
     ) -> List[Dict[str, Any]]:
-        """
-        Call OpenAI to intelligently score URLs for business intelligence value.
-        
-        Args:
-            urls: List of URLs to score
-            context: Company context for intelligent scoring
-            
-        Returns:
-            List of dictionaries with scoring results:
-            {
-                "url": "https://...",
-                "score": 85,
-                "reason": "Company mission and values page",
-                "category": "leadership"
-            }
-            
-        Raises:
-            ValueError: If no API key is provided
-            httpx.HTTPStatusError: If API call fails
-        """
+        """Score URLs for business intelligence value using OpenAI."""
         if not self._has_api_key():
             raise ValueError("OpenAI API key required for AI-powered URL scoring")
         
         try:
-            # Build the intelligent scoring prompt
+            # 1️⃣ Build the intelligent scoring prompt ----
             prompt = self._build_scoring_prompt(urls, context)
             
-            # Make OpenAI API call
+            # 2️⃣ Make OpenAI API call ----
             response = await self._call_openai(prompt)
             
-            # Parse and validate the response
+            # 3️⃣ Parse and validate the response ----
             scored_urls = self._parse_ai_response(response, urls)
             
-            logger.info(f"AI successfully scored {len(scored_urls)} URLs")
+            logger.info("AI successfully scored URLs", extra={"urls_scored": len(scored_urls)})
             return scored_urls
             
         except Exception as e:
-            logger.error(f"AI scoring failed: {e}")
+            logger.error("AI scoring failed", extra={"error": str(e)})
             raise
     
     def _build_scoring_prompt(self, urls: List[str], context: str) -> str:
-        """
-        Build the prompt for AI scoring.
-        
-        Args:
-            urls: List of URLs to score
-            context: Company context information
-            
-        Returns:
-            Formatted prompt string for OpenAI
-        """
+        """Build the prompt for AI scoring."""
         url_list = "\n".join([f"- {url}" for url in urls])
         
         prompt = f"""You are an expert business intelligence analyst. Score these URLs for their business intelligence value.
@@ -117,11 +99,6 @@ Instructions:
 Scoring Guidelines:
 - 90-100: Company mission, leadership, core strategy
 - 80-89: Products/services, case studies, major announcements
-- 70-79: Company culture, customer success, industry insights
-- 60-69: Blog posts, news, partnerships
-- 40-59: General company information
-- 20-39: Contact, support, utility pages
-- 0-19: Legal, privacy, login pages
 
 Categories:
 - leadership: About, team, executives, board
@@ -158,6 +135,7 @@ Return ONLY valid JSON in this exact format:
             httpx.HTTPStatusError: If API call fails
         """
         try:
+            # 1️⃣ Prepare HTTP client and OpenAI request ----
             async with httpx.AsyncClient() as client:
                 response = await client.post(
                     self._base_url,
@@ -183,22 +161,23 @@ Return ONLY valid JSON in this exact format:
                     timeout=30.0
                 )
                 
+                # 2️⃣ Validate response and extract content ----
                 response.raise_for_status()
                 data = response.json()
                 
                 # Extract content from OpenAI response
                 if "choices" in data and len(data["choices"]) > 0:
                     content = data["choices"][0]["message"]["content"]
-                    logger.debug(f"OpenAI response: {content}")
+                    logger.debug("OpenAI response received", extra={"content_length": len(content)})
                     return content
                 else:
                     raise ValueError("Invalid OpenAI response format")
                     
         except httpx.HTTPStatusError as e:
-            logger.error(f"OpenAI API HTTP error: {e.response.status_code}")
+            logger.error("OpenAI API HTTP error", extra={"status_code": e.response.status_code})
             raise
         except Exception as e:
-            logger.error(f"OpenAI API call failed: {e}")
+            logger.error("OpenAI API call failed", extra={"error": str(e)})
             raise
     
     def _parse_ai_response(self, response: str, original_urls: List[str]) -> List[Dict[str, Any]]:
@@ -216,7 +195,7 @@ Return ONLY valid JSON in this exact format:
             ValueError: If response cannot be parsed
         """
         try:
-            # Clean the response and extract JSON
+            # 1️⃣ Clean the response and extract JSON ----
             cleaned_response = response.strip()
             if cleaned_response.startswith("```json"):
                 cleaned_response = cleaned_response[7:]
@@ -225,13 +204,13 @@ Return ONLY valid JSON in this exact format:
             
             cleaned_response = cleaned_response.strip()
             
-            # Parse JSON response
+            # 2️⃣ Parse JSON response ----
             parsed_data = json.loads(cleaned_response)
             
             if not isinstance(parsed_data, list):
                 raise ValueError("AI response is not a list")
             
-            # Validate and normalize the response
+            # 3️⃣ Validate and normalize the response ----
             validated_results = []
             for item in parsed_data:
                 if not isinstance(item, dict):
@@ -254,9 +233,9 @@ Return ONLY valid JSON in this exact format:
                 
                 validated_results.append(validated_item)
             
-            # Ensure we have results for all original URLs
+            # 4️⃣ Ensure we have results for all original URLs ----
             if len(validated_results) != len(original_urls):
-                logger.warning(f"AI response incomplete: {len(validated_results)}/{len(original_urls)} URLs scored")
+                logger.warning("AI response incomplete", extra={"validated_count": len(validated_results), "original_count": len(original_urls)})
                 
                 # Add missing URLs with default scores
                 scored_urls = {item["url"] for item in validated_results}
@@ -272,10 +251,10 @@ Return ONLY valid JSON in this exact format:
             return validated_results
             
         except json.JSONDecodeError as e:
-            logger.error(f"Failed to parse AI response as JSON: {e}")
+            logger.error("Failed to parse AI response as JSON", extra={"error": str(e)})
             raise ValueError(f"Invalid JSON response from AI: {e}")
         except Exception as e:
-            logger.error(f"Failed to parse AI response: {e}")
+            logger.error("Failed to parse AI response", extra={"error": str(e)})
             raise ValueError(f"Response parsing failed: {e}")
 
 

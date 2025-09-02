@@ -1,22 +1,24 @@
-"""Integration tests with real companies for demonstration purposes.
+# ==============================================================================
+# test_examples.py — Example test cases and testing utilities
+# ==============================================================================
+# Purpose: Provide example test cases and testing patterns for the codebase
+# Sections: Imports, Test Utilities, Example Test Cases, Mock Data
+# ==============================================================================
 
-These tests use real companies and can optionally run against real APIs
-for demonstration and validation purposes.
-"""
-
-import sys
+# Standard Library --------------------------------------------------------------
 import os
-sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-
-import pytest
-import asyncio
+import sys
 from datetime import datetime, timezone
-from typing import Dict, Any
-from unittest.mock import patch, AsyncMock
+from typing import Any, Dict
+from unittest.mock import AsyncMock, patch
 
-# Domain imports
+# Third Party -------------------------------------------------------------------
+import asyncio
+import pytest
+
+# Core (App-wide) ---------------------------------------------------------------
+from core.types.models import AnalysisOutput, RegistrationRequest
 from domains.intelligence_collection import process_registration
-from core.types.models import RegistrationRequest, AnalysisOutput
 
 
 @pytest.fixture
@@ -252,12 +254,7 @@ class TestRealCompanyExamples:
         mock_replicate_filtered: list,
         mock_replicate_content: Dict[str, str]
     ):
-        """
-        Test intelligence collection for Replicate (small startup).
-    
-        Verifies that the system can discover and analyze key pages
-        typically found on startup websites: About, Blog, Docs.
-        """
+        """Test intelligence collection for Replicate (small startup)."""
         # Arrange
         registration_data = RegistrationRequest(**replicate_registration_data)
     

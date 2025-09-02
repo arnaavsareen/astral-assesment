@@ -1,31 +1,21 @@
-"""LinkedIn URL parsing utilities for extracting profile identifiers."""
+# ==============================================================================
+# url_parser.py — LinkedIn URL parsing and validation utilities
+# ==============================================================================
+# Purpose: Parse, validate, and extract information from LinkedIn URLs
+# Sections: Imports, URL Parsing, Validation Logic, Information Extraction
+# ==============================================================================
 
+# Standard Library --------------------------------------------------------------
 import re
-from typing import Optional
-from urllib.parse import urlparse, parse_qs
+from typing import Any, Dict, Optional, Union
+from urllib.parse import parse_qs, urlparse
+
+# Core (App-wide) ---------------------------------------------------------------
+from core.utils.url_utils import normalize_url
 
 
 def extract_profile_id(linkedin_url: str) -> str:
-    """
-    Extract profile ID from LinkedIn URL.
-    
-    Args:
-        linkedin_url: LinkedIn profile URL in various formats
-        
-    Returns:
-        Profile identifier (e.g., 'johndoe' from 'https://linkedin.com/in/johndoe')
-        
-    Raises:
-        ValueError: If URL format is invalid or profile ID cannot be extracted
-        
-    Examples:
-        >>> extract_profile_id("https://linkedin.com/in/johndoe")
-        'johndoe'
-        >>> extract_profile_id("https://www.linkedin.com/in/johndoe/")
-        'johndoe'
-        >>> extract_profile_id("https://linkedin.com/in/johndoe?trk=profile")
-        'johndoe'
-    """
+    """Extract profile ID from LinkedIn URL in various formats."""
     if not linkedin_url:
         raise ValueError("LinkedIn URL cannot be empty")
     
@@ -66,15 +56,7 @@ def extract_profile_id(linkedin_url: str) -> str:
 
 
 def _is_valid_profile_id(profile_id: str) -> bool:
-    """
-    Validate LinkedIn profile ID format.
-    
-    Args:
-        profile_id: Profile identifier to validate
-        
-    Returns:
-        True if valid, False otherwise
-    """
+    """Validate LinkedIn profile ID format."""
     if not profile_id:
         return False
     
@@ -85,15 +67,7 @@ def _is_valid_profile_id(profile_id: str) -> bool:
 
 
 def is_valid_linkedin_url(url: str) -> bool:
-    """
-    Check if URL is a valid LinkedIn profile URL.
-    
-    Args:
-        url: URL to validate
-        
-    Returns:
-        True if valid LinkedIn profile URL, False otherwise
-    """
+    """Check if URL is a valid LinkedIn profile URL."""
     try:
         extract_profile_id(url)
         return True
@@ -102,21 +76,7 @@ def is_valid_linkedin_url(url: str) -> bool:
 
 
 def normalize_linkedin_url(url: str) -> str:
-    """
-    Normalize LinkedIn URL to standard format.
-    
-    Args:
-        url: LinkedIn URL to normalize
-        
-    Returns:
-        Normalized LinkedIn URL
-        
-    Examples:
-        >>> normalize_linkedin_url("linkedin.com/in/johndoe")
-        'https://www.linkedin.com/in/johndoe'
-        >>> normalize_linkedin_url("https://linkedin.com/in/johndoe?trk=profile")
-        'https://www.linkedin.com/in/johndoe'
-    """
+    """Normalize LinkedIn URL to standard format."""
     try:
         profile_id = extract_profile_id(url)
         return f"https://www.linkedin.com/in/{profile_id}"

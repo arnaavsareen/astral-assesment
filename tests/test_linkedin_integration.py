@@ -1,17 +1,28 @@
-"""Test LinkedIn ScrapingDog integration and profile analysis."""
+# ==============================================================================
+# test_linkedin_integration.py — LinkedIn service integration tests
+# ==============================================================================
+# Purpose: Test LinkedIn profile analysis and scraping functionality
+# Sections: Imports, Test Configuration, Integration Tests, Mock Data
+# ==============================================================================
 
+# Standard Library --------------------------------------------------------------
 import pytest
-import asyncio
-from unittest.mock import AsyncMock, patch, MagicMock
-from services.linkedin.url_parser import (
-    extract_profile_id, 
-    is_valid_linkedin_url, 
+from unittest.mock import patch, AsyncMock, MagicMock
+from typing import Dict, Any
+
+# Third Party -------------------------------------------------------------------
+# (none)
+
+# Core (App-wide) ---------------------------------------------------------------
+from services.linkedin import (
+    analyze_linkedin_profile,
+    LinkedInProfileAnalyzer,
+    ScrapingDogClient,
+    extract_profile_id,
+    is_valid_linkedin_url,
     normalize_linkedin_url,
     get_profile_url_from_id
 )
-from services.linkedin.scrapingdog_client import ScrapingDogClient
-from services.linkedin.profile_analyzer import LinkedInProfileAnalyzer
-from services.linkedin.analyzer import analyze_linkedin_profile
 
 
 class TestLinkedInURLParser:

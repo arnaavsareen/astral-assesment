@@ -1,30 +1,25 @@
-"""LinkedIn profile data analysis and structuring."""
+# ==============================================================================
+# profile_analyzer.py — LinkedIn profile data processing and analysis
+# ==============================================================================
+# Purpose: Process and analyze LinkedIn profile data for business intelligence insights
+# Sections: Imports, Profile Data Models, Analysis Functions, Intelligence Scoring
+# ==============================================================================
 
+# Standard Library --------------------------------------------------------------
 import logging
-from typing import Dict, Any, List, Optional
+import re
 from datetime import datetime, timezone
+from typing import Any, Dict, List, Optional, Union
 
 # Configure logging
 logger = logging.getLogger(__name__)
 
 
 class LinkedInProfileAnalyzer:
-    """
-    Analyze and structure LinkedIn profile data from ScrapingDog API.
-    
-    Transforms raw API response into structured business intelligence.
-    """
+    """Analyze and structure LinkedIn profile data from ScrapingDog API."""
     
     def analyze_profile(self, raw_data: Dict[str, Any]) -> Dict[str, Any]:
-        """
-        Transform raw ScrapingDog data into structured analysis.
-        
-        Args:
-            raw_data: Raw response from ScrapingDog LinkedIn API
-            
-        Returns:
-            Structured analysis with business intelligence insights
-        """
+        """Transform raw ScrapingDog data into structured analysis."""
         try:
             # Handle case where API returns array with single profile
             if isinstance(raw_data, list) and len(raw_data) > 0:
@@ -44,7 +39,7 @@ class LinkedInProfileAnalyzer:
             }
             
         except Exception as e:
-            logger.error(f"Failed to analyze LinkedIn profile data: {e}")
+            logger.error("Failed to analyze LinkedIn profile data", extra={"error": str(e)})
             return {
                 "error": f"Profile analysis failed: {str(e)}",
                 "raw_data": raw_data

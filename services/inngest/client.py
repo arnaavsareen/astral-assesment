@@ -1,8 +1,20 @@
-"""Singleton Inngest client for background job processing."""
+# ==============================================================================
+# client.py — Inngest workflow orchestration client
+# ==============================================================================
+# Purpose: Client for Inngest workflow orchestration and event-driven processing
+# Sections: Imports, Client Configuration, Event Publishing, Workflow Management
+# ==============================================================================
 
+# Standard Library --------------------------------------------------------------
+import json
 import logging
 import os
-from inngest import Inngest
+from typing import Any, Dict, List, Optional
+
+# Third Party -------------------------------------------------------------------
+from inngest import Inngest, Event
+
+# Core (App-wide) ---------------------------------------------------------------
 from core.config.settings import settings
 
 

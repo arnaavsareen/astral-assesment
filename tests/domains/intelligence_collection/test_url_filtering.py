@@ -1,12 +1,21 @@
-"""Tests for URL filtering functionality with OpenAI integration."""
+# ==============================================================================
+# test_url_filtering.py — URL filtering and classification tests
+# ==============================================================================
+# Purpose: Test URL filtering logic and business intelligence classification
+# Sections: Imports, Test Configuration, Filtering Tests, Mock Setup
+# ==============================================================================
 
+# Standard Library --------------------------------------------------------------
 import pytest
-from unittest.mock import AsyncMock, patch, MagicMock
+from unittest.mock import patch, AsyncMock, MagicMock
 from typing import List, Dict, Any
 
-# Domain imports
-from domains.intelligence_collection.filtering.url_filter import filter_valuable_urls
-from services.ai.client import ai_client
+# Third Party -------------------------------------------------------------------
+# (none)
+
+# Core (App-wide) ---------------------------------------------------------------
+from domains.intelligence_collection import filter_valuable_urls
+from services.ai import ai_client, AIClient
 
 
 @pytest.fixture
@@ -354,8 +363,4 @@ class TestAIClientIntegration:
         
         # Should raise ValueError
         with pytest.raises(ValueError, match="Invalid JSON response"):
-            ai_client._parse_ai_response(malformed_response, ["https://example.com/about"])
-
-
-# Import AIClient for testing
-from services.ai.client import AIClient 
+            ai_client._parse_ai_response(malformed_response, ["https://example.com/about"]) 

@@ -1,12 +1,24 @@
-"""Registration router for handling user registration requests."""
+# ==============================================================================
+# register.py — User registration and authentication endpoints
+# ==============================================================================
+# Purpose: Handle user registration, validation, and account creation workflows
+# Sections: Imports, Registration Models, Validation Logic, API Endpoints
+# ==============================================================================
 
+# Standard Library --------------------------------------------------------------
 import logging
 import uuid
-from typing import Dict, Any
-from fastapi import APIRouter, HTTPException
+from typing import Dict, Any, Optional
+
+# Third Party -------------------------------------------------------------------
+from fastapi import APIRouter, HTTPException, Depends
 from inngest import Event
+from pydantic import BaseModel, EmailStr
+
+# Core (App-wide) ---------------------------------------------------------------
 from core.types.models import RegistrationRequest
-from services.inngest.client import inngest_client
+# Service layer imports
+from services.inngest import inngest_client
 
 # Configure logging
 logger = logging.getLogger(__name__)
@@ -25,18 +37,7 @@ router = APIRouter(
 
 @router.post("")
 async def register_user(data: RegistrationRequest) -> Dict[str, Any]:
-    """
-    Register a new user and trigger background intelligence collection.
-    
-    Args:
-        data: Registration request containing user data and URLs
-        
-    Returns:
-        Immediate response with request_id and processing status
-        
-    Raises:
-        HTTPException: If validation fails or Inngest event fails to send
-    """
+    """Register user and trigger background intelligence collection."""
     try:
         # 1️⃣ Generate unique request ID ----
         request_id = str(uuid.uuid4())
@@ -58,11 +59,11 @@ async def register_user(data: RegistrationRequest) -> Dict[str, Any]:
                 )
             )
             
-            logger.info(f"Successfully triggered background processing for {request_id}")
+            logger.info("Successfully triggered background processing", extra={"request_id": request_id})
             
         except Exception as e:
             # Handle Inngest trigger failure
-            logger.error(f"Failed to trigger background processing for {request_id}: {e}")
+            logger.error("Failed to trigger background processing", extra={"request_id": request_id, "error": str(e)})
             raise HTTPException(
                 status_code=500,
                 detail={
@@ -96,7 +97,7 @@ async def register_user(data: RegistrationRequest) -> Dict[str, Any]:
         
     except Exception as e:
         # Handle unexpected errors
-        logger.error(f"Unexpected error in registration endpoint: {e}", exc_info=True)
+        logger.error("Unexpected error in registration endpoint", extra={"error": str(e), "request_id": request_id if 'request_id' in locals() else None}, exc_info=True)
         raise HTTPException(
             status_code=500,
             detail={

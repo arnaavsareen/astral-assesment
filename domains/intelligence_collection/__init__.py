@@ -1,5 +1,7 @@
 """Intelligence Collection domain - orchestrates business intelligence gathering."""
 
+# Standard Library --------------------------------------------------------------
+import logging
 import uuid
 from datetime import datetime, timezone
 from typing import Optional
@@ -18,6 +20,18 @@ from domains.intelligence_collection.extraction.content_extractor import extract
 # Service layer imports
 from services.firecrawl.client import firecrawl_client
 from services.linkedin.analyzer import analyze_linkedin_profile
+
+# Configure logging
+logger = logging.getLogger(__name__)
+
+# Public API - all functions that should be accessible from this domain
+__all__ = [
+    "process_registration",
+    "validate_data_source", 
+    "discover_company_urls",
+    "filter_valuable_urls",
+    "extract_content"
+]
 
 
 async def process_registration(data: RegistrationRequest) -> AnalysisOutput:
@@ -104,7 +118,9 @@ async def process_registration(data: RegistrationRequest) -> AnalysisOutput:
     try:
         await save_analysis(analysis_output.model_dump(), request_id)
     except Exception as e:
-        # Log error but don't fail the entire process
-        print(f"Warning: Failed to save analysis for {request_id}: {e}")
+        # Log the save failure but don't fail the entire process
+        # The analysis results are still valid and should be returned
+        logger.warning("Failed to save analysis results", extra={"request_id": request_id, "error": str(e)})
+        # Continue with the process - saving failure shouldn't break the workflow
     
     return analysis_output 

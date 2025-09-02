@@ -1,9 +1,19 @@
-"""ScrapingDog LinkedIn API client for profile scraping."""
+# ==============================================================================
+# scrapingdog_client.py — ScrapingDog API client for LinkedIn scraping
+# ==============================================================================
+# Purpose: Client for ScrapingDog API to scrape LinkedIn profiles and data
+# Sections: Imports, API Client Configuration, Scraping Methods, Response Handling
+# ==============================================================================
 
+# Standard Library --------------------------------------------------------------
 import asyncio
 import logging
 from typing import Dict, Any, Optional
+
+# Third Party -------------------------------------------------------------------
 import httpx
+
+# Core (App-wide) ---------------------------------------------------------------
 from core.config.settings import settings
 from services.linkedin.url_parser import extract_profile_id
 
@@ -67,44 +77,47 @@ class ScrapingDogClient:
                     
                     data = response.json()
                     
-                    # Log successful request
-                    logger.info(f"ScrapingDog API request successful for profile: {params.get('linkId')}")
+                    logger.info("ScrapingDog API request successful for profile", extra={"profile_id": params.get('linkId')})
                     
                     return data
                     
             except httpx.HTTPStatusError as e:
-                if e.response.status_code == 429 and attempt < max_retries - 1:
-                    # Rate limited - exponential backoff
-                    wait_time = 2 ** attempt
-                    logger.warning(f"Rate limited, retrying in {wait_time}s (attempt {attempt + 1}/{max_retries})")
-                    await asyncio.sleep(wait_time)
-                    continue
+                if e.response.status_code == 429:  # Rate limited
+                    if attempt < max_retries:
+                        wait_time = 2 ** attempt
+                        logger.warning("Rate limited, retrying", extra={"attempt": attempt + 1, "max_retries": max_retries, "wait_time": wait_time})
+                        await asyncio.sleep(wait_time)
+                        attempt += 1
+                        continue
+                    else:
+                        logger.error("ScrapingDog API error", extra={"status_code": e.response.status_code, "response_text": e.response.text})
+                        raise httpx.HTTPStatusError("Rate limit exceeded", request=None, response=response)
                 elif e.response.status_code == 401:
                     raise ValueError("Invalid ScrapingDog API key")
                 elif e.response.status_code == 404:
                     raise ValueError(f"LinkedIn profile not found: {params.get('linkId')}")
                 else:
-                    logger.error(f"ScrapingDog API error: {e.response.status_code} - {e.response.text}")
+                    logger.error("ScrapingDog API error", extra={"status_code": e.response.status_code, "response_text": e.response.text})
                     raise
             except Exception as e:
                 if attempt < max_retries - 1:
                     wait_time = 2 ** attempt
-                    logger.warning(f"Request failed, retrying in {wait_time}s (attempt {attempt + 1}/{max_retries}): {e}")
+                    logger.warning("Request failed, retrying", extra={"attempt": attempt + 1, "max_retries": max_retries, "wait_time": wait_time, "error": str(e)})
                     await asyncio.sleep(wait_time)
                     continue
                 else:
-                    logger.error(f"ScrapingDog API request failed after {max_retries} attempts: {e}")
+                    logger.error("ScrapingDog API request failed after all attempts", extra={"max_retries": max_retries, "error": str(e)})
                     raise
         
         raise Exception(f"ScrapingDog API request failed after {max_retries} attempts")
     
-    async def scrape_profile(self, linkedin_url: str, premium: bool = False) -> Dict[str, Any]:
+    async def scrape_profile(self, linkedin_url: str, premium: bool = True) -> Dict[str, Any]:
         """
         Scrape LinkedIn profile using ScrapingDog API.
         
         Args:
             linkedin_url: LinkedIn profile URL
-            premium: Use premium proxies (default: False)
+            premium: Use premium proxies (default: True)
             
         Returns:
             LinkedIn profile data from ScrapingDog API
@@ -124,7 +137,7 @@ class ScrapingDogClient:
                 "premium": premium
             }
             
-            logger.info(f"Scraping LinkedIn profile: {profile_id}")
+            logger.info("Scraping LinkedIn profile", extra={"profile_id": profile_id})
             
             # Make API request
             response = await self._make_request(params)
@@ -135,8 +148,8 @@ class ScrapingDogClient:
             # Re-raise validation errors
             raise
         except Exception as e:
-            logger.error(f"Failed to scrape LinkedIn profile {linkedin_url}: {e}")
-            raise
+            logger.error("Failed to scrape LinkedIn profile", extra={"linkedin_url": linkedin_url, "error": str(e)})
+            return None
     
     def _get_mock_response(self, profile_id: str) -> Dict[str, Any]:
         """
@@ -230,5 +243,5 @@ class ScrapingDogClient:
                 logger.info("API connection test successful (expected validation error for test profile)")
                 return True
         except Exception as e:
-            logger.error(f"API connection test failed: {e}")
+            logger.error("API connection test failed", extra={"error": str(e)})
             return False 
