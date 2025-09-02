@@ -281,6 +281,17 @@ The system is designed to work with small to mid-size companies that have:
 - Companies with minimal web presence
 - Sites with heavy JavaScript rendering requirements
 
+For instance : I used myself as an example:
+
+```json
+{
+  "first_name": "Arnaav",
+  "last_name": "Sareen",
+  "company_website": "https:siftaitechnologies.com/",
+  "linkedin": "https://www.linkedin.com/in/arnaavsareen/"
+}
+```
+
 ## Current Status
 
 ### **Fully Functional Features**

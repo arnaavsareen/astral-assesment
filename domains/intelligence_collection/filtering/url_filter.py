@@ -35,12 +35,12 @@ async def filter_valuable_urls(
         
         # AI-powered scoring
         scored_urls = await ai_client.score_urls_for_business_intelligence(urls, context_string)
-        logger.info("AI scoring successful", extra={"urls_selected": len(selected_urls)})
+        logger.info("AI scoring successful", extra={"urls_scored": len(scored_urls)})
         
         # 2️⃣ Apply diversity algorithm ----
         selected_urls = _ensure_diversity(scored_urls, max_urls)
         
-        logger.info("AI scoring successful", extra={"urls_selected": len(selected_urls)})
+        logger.info("URL selection completed", extra={"urls_selected": len(selected_urls)})
         return selected_urls
         
     except Exception as e:
