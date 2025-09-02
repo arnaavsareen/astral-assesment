@@ -28,13 +28,6 @@ You must read and understand the engineering principles. All work is evaluated a
 - **Fail fast & simple:** Validate only uncertain inputs, catch only what you can handle.
 - **Domains own business logic:** Services integrate external systems, API handles HTTP concerns.
 
-## Project Resources
-
-1. Inngest docs: `https://www.inngest.com/docs?ref=nav`
-2. Firecrawl docs: `https://docs.firecrawl.dev/introduction`
-3. Firecrawl playground: `https://www.firecrawl.dev/playground`
-4. API keys: OpenAI, Firecrawl, ScrapingDog (configured in `.env`)
-
 ## What You'll Build
 
 A FastAPI application with two routers:
@@ -71,7 +64,7 @@ There are three potential paths:
 
 **Goal:** Learn as much as possible about the individual and their company.
 
-#### 1) LinkedIn Research Task
+#### LinkedIn Implementation Plan
 
 We integrate ScrapingDog's LinkedIn API for profile data to avoid building a brittle scraper. The chosen approach reduces failure points and keeps the system simple.
 
@@ -83,7 +76,7 @@ We integrate ScrapingDog's LinkedIn API for profile data to avoid building a bri
 
 **Key Docs:** `https://www.scrapingdog.com/linkedin-scraper-api`
 
-#### 2) Website Analysis (Firecrawl)
+#### Website Analysis (Firecrawl)
 
 Firecrawl is used for:
 - **URL Discovery** (map endpoint) — Fast, lightweight, and credit-efficient
@@ -150,6 +143,11 @@ astral-assesment/
 ├── core/                          # Shared utilities and types
 │   ├── __init__.py
 │   ├── understandMe.md            # Core layer documentation
+│   ├── clients/                   # External service clients
+│   │   ├── __init__.py
+│   │   ├── firecrawl.py          # Firecrawl web scraping client
+│   │   ├── scrapingdog.py        # ScrapingDog LinkedIn client
+│   │   └── openai.py             # OpenAI AI service client
 │   ├── config/                    # Configuration management
 │   │   ├── __init__.py
 │   │   └── settings.py            # Application settings
@@ -174,44 +172,44 @@ astral-assesment/
 │       ├── extraction/            # Content extraction
 │       │   ├── __init__.py
 │       │   └── content_extractor.py # Web content extraction
-│       └── filtering/             # URL filtering
+│       ├── filtering/             # URL filtering
+│       │   ├── __init__.py
+│       │   └── url_filter.py      # AI-powered URL filtering
+│       └── linkedin/              # LinkedIn profile analysis
 │           ├── __init__.py
-│           └── url_filter.py      # AI-powered URL filtering
+│           ├── analyzer.py        # Main LinkedIn analyzer
+│           ├── profile_analyzer.py # Profile data analysis
+│           ├── url_parser.py      # LinkedIn URL parsing
+│           └── scrapingdog_client.py # ScrapingDog API client
 │
 ├── services/                      # External service integrations
 │   ├── __init__.py
 │   ├── understandMe.md            # Services layer documentation
-│   ├── ai/                        # AI client for content analysis
-│   │   ├── __init__.py
-│   │   ├── understandMe.md        # AI service documentation
-│   │   └── client.py              # AI service client
-│   ├── firecrawl/                 # Web scraping service
-│   │   ├── __init__.py
-│   │   ├── understandMe.md        # Firecrawl service documentation
-│   │   └── client.py              # Firecrawl API client
-│   ├── inngest/                   # Background job processing
-│   │   ├── __init__.py
-│   │   ├── client.py              # Inngest client
-│   │   ├── functions.py           # Background job functions
-│   │   └── README.md              # Inngest integration docs
-│   └── linkedin/                  # LinkedIn profile analysis
+│   └── inngest/                   # Background job processing
 │       ├── __init__.py
-│       ├── understandMe.md        # LinkedIn service documentation
-│       ├── analyzer.py            # Main LinkedIn analyzer
-│       ├── profile_analyzer.py    # Profile data analysis
-│       ├── scrapingdog_client.py  # ScrapingDog API client
-│       └── url_parser.py          # LinkedIn URL parsing
+│       ├── client.py              # Inngest client
+│       ├── functions.py           # Background job functions
+│       └── README.md              # Inngest integration docs
 │
 ├── tests/                         # Comprehensive test suite
 │   ├── __init__.py
+│   ├── README.md                  # Test documentation and guidelines
+│   ├── api/                       # API endpoint tests
+│   │   ├── test_health.py        # Health check tests
+│   │   ├── test_main.py          # Application configuration tests
+│   │   └── test_register.py      # Registration endpoint tests
+│   ├── core/                      # Core layer tests
+│   │   └── type_models/          # Pydantic model tests
+│   │       └── test_models.py    # Model validation tests
 │   ├── domains/                   # Domain-specific tests
 │   │   └── intelligence_collection/ # Core business logic tests
-│   │       ├── test_process.py    # Main workflow tests
+│   │       ├── linkedin/         # LinkedIn functionality tests
+│   │       │   ├── test_profile_analyzer.py # Profile analysis tests
+│   │       │   └── test_url_parser.py # URL parsing tests
+│   │       ├── test_process.py   # Main workflow tests
 │   │       └── test_url_filtering.py # URL filtering tests
-│   ├── test_examples.py           # Real company examples
-│   ├── test_inngest_integration.py # Inngest integration tests
-│   ├── test_linkedin_integration.py # LinkedIn integration tests
-│   └── README.md                  # Test documentation
+│   └── integration/               # Cross-domain integration tests
+│       └── test_linkedin_workflow.py # End-to-end workflow tests
 │
 ├── .cursor/                       # Cursor IDE configuration
 │   └── rules/                     # Development rules and guidelines
@@ -223,7 +221,6 @@ astral-assesment/
 ├── .cursorrules                   # Cursor IDE rules
 ├── .gitignore                     # Git ignore patterns
 ├── README.md                      # This file - main documentation
-├── PROJECT_STRUCTURE.md           # Detailed project structure
 ├── requirements.txt               # Python dependencies
 ├── pytest.ini                    # Pytest configuration
 ├── setup.sh                      # Automated setup script
@@ -259,9 +256,9 @@ astral-assesment/
 - Analyzer transforms raw data into BI structures aligned with business questions
 
 ### Testing
-- **56 tests passing**, covering domain logic, integration surfaces, and realistic examples
+- **129 tests passing**, covering domain logic, integration surfaces, and realistic examples
 - External dependencies mocked to ensure fast, deterministic tests
-- Examples include small/mid-size companies (Replicate, Airtable) to reflect real-world patterns
+- Examples include small/mid-size companies to reflect real-world patterns
 
 ## Setup
 
@@ -299,36 +296,44 @@ pip install -r requirements.txt
 **Create `.env` in the repo root:**
 
 ```env
+# App Configuration
 APP_NAME=astral-assessment
 APP_VERSION=1.0.0
 ENVIRONMENT=development
 
-# API Keys
-FIRECRAWL_API_KEY=your-firecrawl-key
-SCRAPINGDOG_API_KEY=your-scrapingdog-key
-OPENAI_API_KEY=your-openai-key
+# External Services (add your API keys here)
+FIRECRAWL_API_KEY=your_firecrawl_key_here
+SCRAPINGDOG_API_KEY=your_scrapingdog_key_here
+INNGEST_EVENT_KEY=your_inngest_key_here
+INNGEST_SERVE_URL=your_inngest_url_here
 
-# Inngest Configuration
-INNGEST_APP_ID=astral-assessment
-INNGEST_EVENT_KEY=your-event-key
-INNGEST_SIGNING_KEY=your-signing-key
-INNGEST_DEV=1  # Set to 1 for development mode
+# Optional: AI Configuration
+OPENAI_API_KEY=your_openai_key_here
+
+# Development Settings
+DEBUG=true
+LOG_LEVEL=INFO
+HOST=0.0.0.0
+PORT=8000
 ```
 
 ## Running the App
 
-### Terminal 1 - Start Inngest Dev Server
+### Start FastAPI with Dev Mode
 
-```bash
-npx inngest-cli@latest dev
-```
-
-### Terminal 2 - Start FastAPI with Dev Mode
+In one terminal:
 
 ```bash
 cd /path/to/astral-assesment
 source venv/bin/activate
+export INNGEST_DEV=1
 uvicorn api.main:app --reload --host 0.0.0.0 --port 8000
+```
+
+In the other terminal:
+
+```bash
+npx inngest-cli@latest dev
 ```
 
 ### Access Points
@@ -336,7 +341,7 @@ uvicorn api.main:app --reload --host 0.0.0.0 --port 8000
 - **API Documentation:** `http://localhost:8000/docs`
 - **Health Checks:** 
   - `GET /health` - Basic health status
-  - `GET /health/detailed` - Comprehensive system status with all 4 services
+  - `GET /health/detailed` - Comprehensive system status with all services
 - **Registration Endpoint:** `POST /register`
 
 ### Example Request
@@ -370,9 +375,6 @@ Content-Type: application/json
 ```bash
 python run_tests.py quick      # Quick validation
 python run_tests.py core       # Business logic tests
-python run_tests.py examples   # Real company examples
-python run_tests.py linkedin   # LinkedIn functionality
-python run_tests.py inngest    # Background processing
 python run_tests.py all        # All tests
 ```
 
@@ -384,16 +386,51 @@ python -m pytest tests/domains/intelligence_collection/ -v  # Domain tests
 python -m pytest tests/ -v --tb=short  # All tests with short tracebacks
 ```
 
+### Test Coverage
+
+The test suite includes **129 tests** covering all configurations:
+
+1. **Website URL only** - Tests company website analysis workflow
+2. **LinkedIn URL only** - Tests LinkedIn profile analysis workflow  
+3. **Both website and LinkedIn** - Tests combined analysis workflow
+
+### Test Categories
+
+- **API Tests** (31 tests): Health checks, registration endpoints, app configuration
+- **Core Tests** (25 tests): Pydantic models, validation, utilities
+- **Domain Tests** (42 tests): LinkedIn analysis, URL processing, workflows
+- **Integration Tests** (10 tests): End-to-end workflows, cross-domain communication
+
+For detailed test documentation, see [tests/README.md](tests/README.md).
+
+## Real Company Examples
+
+The system is designed to work with small to mid-size companies that have:
+- Well-structured websites with clear navigation
+- Professional LinkedIn presence
+- Manageable content volume for analysis
+
+**Good candidates include:**
+- **Tech Startups**: Companies like Replicate, Airtable, Linear
+- **SaaS Companies**: Mid-size B2B software companies
+- **Consulting Firms**: Professional services with clear expertise areas
+- **Creative Agencies**: Design, marketing, or development agencies
+
+**Avoid:**
+- Massive enterprises (Microsoft, Google, Amazon)
+- Companies with minimal web presence
+- Sites with heavy JavaScript rendering requirements
+
 ## Current Status
 
 ### ✅ **Fully Functional Features**
 
-1. **Health Check System** - All 4 services (Inngest, Firecrawl, LinkedIn, AI) reporting healthy
+1. **Health Check System** - All services reporting healthy
 2. **Registration Workflow** - Complete end-to-end processing with background jobs
 3. **Background Processing** - Inngest integration working correctly
-4. **File Management** - Clean, single output file per request (no duplicates)
+4. **File Management** - Clean, single output file per request
 5. **Error Handling** - Comprehensive error handling and logging
-6. **Testing** - 56 tests passing with full coverage
+6. **Testing** - 129 tests passing with full coverage
 
 ### 🔧 **Architecture Compliance**
 
@@ -405,8 +442,8 @@ python -m pytest tests/ -v --tb=short  # All tests with short tracebacks
 
 ### 📊 **Performance Metrics**
 
-- **Test Coverage:** 56 tests passing
-- **Service Health:** 4/4 services healthy
+- **Test Coverage:** 129 tests passing
+- **Service Health:** All services healthy
 - **Response Time:** <100ms for API endpoints
 - **Background Jobs:** Processing successfully via Inngest
 - **File Output:** Clean, organized JSON files

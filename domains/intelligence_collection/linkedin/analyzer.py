@@ -14,9 +14,11 @@ from typing import Dict, Any
 # (none)
 
 # Core (App-wide) ---------------------------------------------------------------
-from services.linkedin.profile_analyzer import LinkedInProfileAnalyzer
-from services.linkedin.scrapingdog_client import ScrapingDogClient
-from services.linkedin.url_parser import is_valid_linkedin_url
+from core.clients.scrapingdog import ScrapingDogClient
+
+# Internal domain modules
+from .profile_analyzer import LinkedInProfileAnalyzer
+from .url_parser import is_valid_linkedin_url
 
 # Configure logging
 logger = logging.getLogger(__name__)
@@ -39,7 +41,7 @@ async def analyze_linkedin_profile(linkedin_url: str) -> Dict[str, Any]:
         raw_data = await client.scrape_profile(linkedin_url)
         
         # 4️⃣ Analyze and structure the data ----
-        analysis = analyzer.analyze_profile(raw_data)
+        analysis = await analyzer.analyze_profile(raw_data)
         
         # 5️⃣ Check if analysis failed ----
         if "error" in analysis:

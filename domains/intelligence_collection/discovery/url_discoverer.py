@@ -14,7 +14,7 @@ from typing import List
 
 # Core (App-wide) ---------------------------------------------------------------
 from core.utils.url_utils import normalize_url
-from services.firecrawl import firecrawl_client
+from core.clients.firecrawl import firecrawl_client
 
 # Configure logging for this module
 logger = logging.getLogger(__name__)

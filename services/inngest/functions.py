@@ -27,7 +27,7 @@ logger = logging.getLogger(__name__)
     trigger=TriggerEvent(event="registration.received")
 )
 async def process_registration_task(ctx):
-    """Process registration request and perform comprehensive business intelligence analysis."""
+    """Process registration request and perform business intelligence analysis."""
     request_id = None  # Initialize request_id at function start
     
     try:

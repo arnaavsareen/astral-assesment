@@ -1,5 +1,5 @@
 # ==============================================================================
-# scrapingdog_client.py — ScrapingDog API client for LinkedIn scraping
+# scrapingdog.py — ScrapingDog API client for LinkedIn scraping
 # ==============================================================================
 # Purpose: Client for ScrapingDog API to scrape LinkedIn profiles and data
 # Sections: Imports, API Client Configuration, Scraping Methods, Response Handling
@@ -15,27 +15,16 @@ import httpx
 
 # Core (App-wide) ---------------------------------------------------------------
 from core.config.settings import settings
-from services.linkedin.url_parser import extract_profile_id
 
 # Configure logging
 logger = logging.getLogger(__name__)
 
 
 class ScrapingDogClient:
-    """
-    ScrapingDog LinkedIn API client for profile scraping.
-    
-    Documentation: https://www.scrapingdog.com/linkedin-scraper-api
-    Cost: 50 credits per successful request
-    """
+    """ScrapingDog LinkedIn API client for profile scraping."""
     
     def __init__(self, api_key: Optional[str] = None):
-        """
-        Initialize ScrapingDog client.
-        
-        Args:
-            api_key: ScrapingDog API key. If None, uses settings.scrapingdog_api_key
-        """
+        """Initialize ScrapingDog client with optional API key."""
         self.api_key = api_key or settings.scrapingdog_api_key
         self.base_url = "https://api.scrapingdog.com/linkedin/"
         self.timeout = getattr(settings, 'scrapingdog_timeout', 30)
@@ -49,20 +38,8 @@ class ScrapingDogClient:
         return bool(self.api_key and self.api_key.strip())
     
     async def _make_request(self, params: Dict[str, Any], max_retries: Optional[int] = None) -> Dict[str, Any]:
-        """
-        Make HTTP request to ScrapingDog API with retry logic.
+        """Make HTTP request to ScrapingDog API with retry logic."""
         
-        Args:
-            params: Query parameters for the request
-            max_retries: Maximum number of retry attempts (defaults to self.max_retries)
-            
-        Returns:
-            API response as dictionary
-            
-        Raises:
-            httpx.HTTPStatusError: If request fails after all retries
-            ValueError: If API key is missing
-        """
         if not self._has_api_key():
             # Return mock data for testing without API key
             return self._get_mock_response(params.get('linkId', 'test-profile'))
@@ -112,21 +89,10 @@ class ScrapingDogClient:
         raise Exception(f"ScrapingDog API request failed after {max_retries} attempts")
     
     async def scrape_profile(self, linkedin_url: str, premium: bool = True) -> Dict[str, Any]:
-        """
-        Scrape LinkedIn profile using ScrapingDog API.
-        
-        Args:
-            linkedin_url: LinkedIn profile URL
-            premium: Use premium proxies (default: True)
-            
-        Returns:
-            LinkedIn profile data from ScrapingDog API
-            
-        Raises:
-            ValueError: If URL is invalid or API key is missing
-        """
+        """Scrape LinkedIn profile using ScrapingDog API."""
         try:
-            # Extract profile ID from URL
+            # Extract profile ID from URL using the business logic layer
+            from domains.intelligence_collection.linkedin.url_parser import extract_profile_id
             profile_id = extract_profile_id(linkedin_url)
             
             # Prepare API request parameters
@@ -152,15 +118,7 @@ class ScrapingDogClient:
             return None
     
     def _get_mock_response(self, profile_id: str) -> Dict[str, Any]:
-        """
-        Return mock response for testing without API key.
-        
-        Args:
-            profile_id: Profile identifier
-            
-        Returns:
-            Mock LinkedIn profile data
-        """
+        """Return mock response for testing without API key."""
         return {
             "fullName": f"Mock User {profile_id}",
             "first_name": "Mock",
@@ -205,25 +163,15 @@ class ScrapingDogClient:
             "score": []
         }
     
-    async def get_credits_remaining(self) -> Optional[int]:
-        """
-        Get remaining credits (if API supports it).
-        
-        Returns:
-            Number of remaining credits or None if not supported
-        """
+    def get_remaining_credits(self) -> Optional[int]:
+        """Get remaining credits (if API supports it)."""
         # Note: ScrapingDog may not provide a credits endpoint
         # This is a placeholder for future implementation
         logger.info("Credits remaining check not implemented for ScrapingDog API")
         return None
     
     async def test_connection(self) -> bool:
-        """
-        Test API connection and key validity.
-        
-        Returns:
-            True if connection successful, False otherwise
-        """
+        """Test API connection and key validity."""
         try:
             if not self._has_api_key():
                 logger.warning("No API key available for connection test")

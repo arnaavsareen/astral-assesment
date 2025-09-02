@@ -14,7 +14,7 @@ from urllib.parse import urlparse
 # (none)
 
 # Core (App-wide) ---------------------------------------------------------------
-from services.ai import ai_client
+from core.clients.openai import ai_client
 
 # Configure logging
 logger = logging.getLogger(__name__)
@@ -88,19 +88,7 @@ def _fallback_filter(
     urls: List[str], 
     max_urls: int
 ) -> List[Dict[str, str]]:
-    """
-    Basic pattern-based filtering if AI fails.
-    
-    Returns same structure as AI filter for consistency.
-    This ensures the system always works even without AI.
-    
-    Args:
-        urls: List of URLs to filter
-        max_urls: Maximum URLs to return
-        
-    Returns:
-        List of dictionaries with: url, score, reason, category
-    """
+    """Basic pattern-based filtering if AI fails."""
     if not urls:
         return []
     
@@ -124,15 +112,7 @@ def _fallback_filter(
 
 
 def _score_url_pattern_based(url: str) -> Tuple[int, str]:
-    """
-    Pattern-based URL scoring for fallback scenarios.
-    
-    Args:
-        url: URL to score
-        
-    Returns:
-        Tuple of (score, reason)
-    """
+    """Score URL using pattern matching for fallback scenarios."""
     url_lower = url.lower()
     path = urlparse(url).path.lower()
     
@@ -163,15 +143,7 @@ def _score_url_pattern_based(url: str) -> Tuple[int, str]:
 
 
 def _extract_category_from_reason(reason: str) -> str:
-    """
-    Extract category from reason string for fallback filtering.
-    
-    Args:
-        reason: Reason string from pattern-based scoring
-        
-    Returns:
-        Category string
-    """
+    """Extract category from reason string for fallback filtering."""
     reason_lower = reason.lower()
     
     if any(term in reason_lower for term in ['mission', 'overview', 'leadership', 'team']):

@@ -17,9 +17,9 @@ from domains.intelligence_collection.discovery.url_discoverer import discover_co
 from domains.intelligence_collection.filtering.url_filter import filter_valuable_urls
 from domains.intelligence_collection.extraction.content_extractor import extract_content
 
-# Service layer imports
-from services.firecrawl.client import firecrawl_client
-from services.linkedin.analyzer import analyze_linkedin_profile
+# Core client imports
+from core.clients.firecrawl import firecrawl_client
+from domains.intelligence_collection.linkedin import analyze_linkedin_profile
 
 # Configure logging
 logger = logging.getLogger(__name__)
@@ -35,20 +35,8 @@ __all__ = [
 
 
 async def process_registration(data: RegistrationRequest) -> AnalysisOutput:
-    """
-    Orchestrate the complete intelligence collection workflow.
+    """Process registration and return business intelligence analysis."""
     
-    Workflow: Validate → Discover → Filter → Extract → Analyze → Save → Return
-    
-    Args:
-        data: Registration request containing user data and URLs
-        
-    Returns:
-        AnalysisOutput with structured results from all data sources
-        
-    Raises:
-        ValueError: If data validation fails
-    """
     # 1️⃣ Validate input has website or linkedin ----
     validate_data_source(data)
     

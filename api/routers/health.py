@@ -16,11 +16,11 @@ from fastapi import APIRouter, HTTPException
 
 # Core (App-wide) ---------------------------------------------------------------
 from core.config.settings import settings
-# Service layer imports
-from services.firecrawl import firecrawl_client
+# Core client imports
+from core.clients.firecrawl import firecrawl_client
+from core.clients.openai import ai_client
 from services.inngest import inngest_client
-from services.linkedin import analyze_linkedin_profile
-from services.ai import ai_client
+from domains.intelligence_collection.linkedin import analyze_linkedin_profile
 
 # Create router with proper tags
 router = APIRouter(
@@ -79,7 +79,7 @@ async def _check_linkedin_service() -> Dict[str, Any]:
     """Check LinkedIn service availability."""
     try:
         # Check if LinkedIn service is properly initialized
-        from services.linkedin.scrapingdog_client import ScrapingDogClient
+        from core.clients.scrapingdog import ScrapingDogClient
         client = ScrapingDogClient()
         has_api_key = client._has_api_key()
         return {

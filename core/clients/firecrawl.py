@@ -1,5 +1,5 @@
 # ==============================================================================
-# client.py — Firecrawl web scraping service client
+# firecrawl.py — Firecrawl web scraping service client
 # ==============================================================================
 # Purpose: Client for Firecrawl web scraping service with async support
 # Sections: Imports, Client Configuration, Scraping Methods, Response Processing
@@ -21,15 +21,7 @@ logger = logging.getLogger(__name__)
 
 
 class FirecrawlClient:
-    """
-    Firecrawl client with optimal API usage.
-    
-    Strategy: Use Firecrawl's map endpoint for URL discovery and scrape endpoint for content extraction.
-    - Map endpoint: Fast, lightweight URL discovery
-    - Scrape endpoint: Content extraction in markdown format
-    
-    API Documentation: https://docs.firecrawl.dev/api-reference/v2-introduction
-    """
+    """Firecrawl client for web scraping with URL discovery and content extraction."""
     
     _instance: Optional['FirecrawlClient'] = None
     _base_url = "https://api.firecrawl.dev/v2"
@@ -101,19 +93,7 @@ class FirecrawlClient:
         return await self._scrape_with_backoff(url)
     
     async def _scrape_with_backoff(self, url: str, attempt: int = 0) -> str:
-        """
-        Scrape with exponential backoff for rate limits.
-        
-        Args:
-            url: URL to scrape
-            attempt: Current attempt number for backoff calculation
-            
-        Returns:
-            Scraped content in markdown format
-            
-        Raises:
-            httpx.HTTPStatusError: If API call fails after all retries
-        """
+        """Scrape with exponential backoff for rate limits."""
         try:
             # 1️⃣ Prepare HTTP client and request ----
             async with httpx.AsyncClient() as client:

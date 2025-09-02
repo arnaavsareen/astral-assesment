@@ -14,7 +14,7 @@ from typing import Dict, List
 # (none)
 
 # Core (App-wide) ---------------------------------------------------------------
-from services.firecrawl import firecrawl_client
+from core.clients.firecrawl import firecrawl_client
 
 # Configure logging for this module
 logger = logging.getLogger(__name__)

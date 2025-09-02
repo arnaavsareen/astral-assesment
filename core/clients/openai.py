@@ -1,5 +1,5 @@
 # ==============================================================================
-# client.py — AI service client and integration
+# openai.py — AI service client and integration
 # ==============================================================================
 # Purpose: Client for AI services including OpenAI and other AI providers
 # Sections: Imports, AI Client Configuration, API Integration, Response Handling
@@ -21,15 +21,7 @@ logger = logging.getLogger(__name__)
 
 
 class AIClient:
-    """
-    Singleton AI client for OpenAI operations.
-    
-    Responsibilities:
-    - Score URLs for business intelligence value
-    - Handle OpenAI API communication
-    - Graceful error handling and fallbacks
-    - Structured response parsing
-    """
+    """Singleton AI client for OpenAI operations and URL scoring."""
     
     _instance: Optional['AIClient'] = None
     _base_url = "https://api.openai.com/v1/chat/completions"
@@ -79,6 +71,20 @@ class AIClient:
             logger.error("AI scoring failed", extra={"error": str(e)})
             raise
     
+    async def analyze_text(self, prompt: str) -> str:
+        """Analyze text using OpenAI for general analysis tasks."""
+        if not self._has_api_key():
+            raise ValueError("OpenAI API key required for AI-powered text analysis")
+        
+        try:
+            # Make OpenAI API call with the provided prompt
+            response = await self._call_openai(prompt)
+            return response
+            
+        except Exception as e:
+            logger.error("AI text analysis failed", extra={"error": str(e)})
+            raise
+    
     def _build_scoring_prompt(self, urls: List[str], context: str) -> str:
         """Build the prompt for AI scoring."""
         url_list = "\n".join([f"- {url}" for url in urls])
@@ -122,18 +128,7 @@ Return ONLY valid JSON in this exact format:
         return prompt
     
     async def _call_openai(self, prompt: str) -> str:
-        """
-        Make OpenAI API call with proper error handling.
-        
-        Args:
-            prompt: The prompt to send to OpenAI
-            
-        Returns:
-            Raw response text from OpenAI
-            
-        Raises:
-            httpx.HTTPStatusError: If API call fails
-        """
+        """Make API call to OpenAI with error handling."""
         try:
             # 1️⃣ Prepare HTTP client and OpenAI request ----
             async with httpx.AsyncClient() as client:
@@ -181,19 +176,7 @@ Return ONLY valid JSON in this exact format:
             raise
     
     def _parse_ai_response(self, response: str, original_urls: List[str]) -> List[Dict[str, Any]]:
-        """
-        Parse and validate AI response.
-        
-        Args:
-            response: Raw response from OpenAI
-            original_urls: Original URLs to ensure we have results for all
-            
-        Returns:
-            Parsed scoring results
-            
-        Raises:
-            ValueError: If response cannot be parsed
-        """
+        """Parse and validate AI response."""
         try:
             # 1️⃣ Clean the response and extract JSON ----
             cleaned_response = response.strip()

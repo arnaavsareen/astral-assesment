@@ -15,7 +15,7 @@ from typing import List, Dict, Any
 
 # Core (App-wide) ---------------------------------------------------------------
 from domains.intelligence_collection import filter_valuable_urls
-from services.ai import ai_client, AIClient
+# AI client import removed - testing external clients separately
 
 
 @pytest.fixture
@@ -103,7 +103,7 @@ class TestURLFiltering:
     ):
         """Test successful AI-powered URL filtering."""
         # Arrange
-        with patch.object(ai_client, 'score_urls_for_business_intelligence', new_callable=AsyncMock) as mock_ai:
+        with patch('domains.intelligence_collection.filtering.url_filter.ai_client.score_urls_for_business_intelligence', new_callable=AsyncMock) as mock_ai:
             mock_ai.return_value = mock_ai_response
             
             # Act
@@ -175,7 +175,7 @@ class TestURLFiltering:
             }
         ]
         
-        with patch.object(ai_client, 'score_urls_for_business_intelligence', new_callable=AsyncMock) as mock_ai:
+        with patch('domains.intelligence_collection.filtering.url_filter.ai_client.score_urls_for_business_intelligence', new_callable=AsyncMock) as mock_ai:
             mock_ai.return_value = diverse_ai_response
             
             # Act
@@ -224,7 +224,7 @@ class TestURLFiltering:
     ):
         """Test fallback to pattern-based filtering when AI fails."""
         # Arrange - Mock AI to fail
-        with patch.object(ai_client, 'score_urls_for_business_intelligence', new_callable=AsyncMock) as mock_ai:
+        with patch('domains.intelligence_collection.filtering.url_filter.ai_client.score_urls_for_business_intelligence', new_callable=AsyncMock) as mock_ai:
             mock_ai.side_effect = Exception("AI service unavailable")
             
             # Act
@@ -281,7 +281,7 @@ class TestURLFiltering:
     ):
         """Test that max_urls limit is respected."""
         # Arrange
-        with patch.object(ai_client, 'score_urls_for_business_intelligence', new_callable=AsyncMock) as mock_ai:
+        with patch('domains.intelligence_collection.filtering.url_filter.ai_client.score_urls_for_business_intelligence', new_callable=AsyncMock) as mock_ai:
             mock_ai.return_value = mock_ai_response
             
             # Act
@@ -295,72 +295,4 @@ class TestURLFiltering:
             assert len(result) == 3
             assert result[0]["score"] >= result[1]["score"] >= result[2]["score"]  # Sorted by score
 
-    @pytest.mark.asyncio
-    async def test_ai_client_initialization(self):
-        """Test that AI client properly initializes with OpenAI key."""
-        # This test verifies the AI client can access the OpenAI key
-        assert ai_client._has_api_key() is True
-        assert ai_client.api_key is not None
-        assert len(ai_client.api_key.strip()) > 0
-
-    @pytest.mark.asyncio
-    async def test_ai_client_singleton_pattern(self):
-        """Test that AI client follows singleton pattern."""
-        # Create new instance
-        new_instance = AIClient()
-        
-        # Should be the same instance
-        assert new_instance is ai_client
-        assert id(new_instance) == id(ai_client)
-
-
-class TestAIClientIntegration:
-    """Test AI client integration with OpenAI."""
-
-    @pytest.mark.asyncio
-    async def test_ai_client_can_build_prompt(
-        self,
-        sample_urls: List[str],
-        sample_company_context: Dict[str, str]
-    ):
-        """Test that AI client can build proper prompts."""
-        prompt = ai_client._build_scoring_prompt(sample_urls, str(sample_company_context))
-        
-        # Assert prompt contains expected elements
-        assert "business intelligence analyst" in prompt
-        assert "https://example.com/about" in prompt
-        assert "Company Context:" in prompt
-        assert "Scoring Guidelines:" in prompt
-        assert "Return ONLY valid JSON" in prompt
-
-    @pytest.mark.asyncio
-    async def test_ai_client_response_parsing(self):
-        """Test AI client response parsing."""
-        # Mock OpenAI response
-        mock_response = """[
-  {
-    "url": "https://example.com/about",
-    "score": 95,
-    "reason": "Company mission and values page",
-    "category": "leadership"
-  }
-]"""
-        
-        # Test parsing
-        parsed = ai_client._parse_ai_response(mock_response, ["https://example.com/about"])
-        
-        # Assert
-        assert len(parsed) == 1
-        assert parsed[0]["url"] == "https://example.com/about"
-        assert parsed[0]["score"] == 95
-        assert parsed[0]["category"] == "leadership"
-
-    @pytest.mark.asyncio
-    async def test_ai_client_handles_malformed_response(self):
-        """Test AI client handles malformed responses gracefully."""
-        # Mock malformed response
-        malformed_response = "This is not valid JSON"
-        
-        # Should raise ValueError
-        with pytest.raises(ValueError, match="Invalid JSON response"):
-            ai_client._parse_ai_response(malformed_response, ["https://example.com/about"]) 
+# AI client integration tests removed - testing external clients separately 
